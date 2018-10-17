@@ -6,7 +6,7 @@ OpenSource-Firmware published under MIT-License
 
 ******************************************************************************************************************
 
-This following pieces of Code defines the Firmware of the StromPi3 Raspberry Pi expansion.
+	This following pieces of Code defines the Firmware of the StromPi3 Raspberry Pi expansion.
 	Its main functions are included into the integrated OpenSource FreeRTOS
 	The Basis I/O HAL Drivers of the STM32F031 are generated with STM32CubeMX and can be modified here in Source
 	or with the "StromPi3.ioc" - File.
@@ -59,3 +59,8 @@ This following pieces of Code defines the Firmware of the StromPi3 Raspberry Pi 
 	If there are questions or something is unclear, please feel free
 	to contact us via E-Mail: service@joy-it.net
 	
+Firmware Updates - Coming Soon:
+
+- Battery state of charge in procent  
+- read out Battery state of charge through script
+- automatic shutdown at low Battery levels
