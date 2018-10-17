@@ -50,3 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+RB-StromPi3.elf.launch
+Debug/RB-StromPi3.binary
+Debug/RB-StromPi3.list
+Debug/RB-StromPi3.binary

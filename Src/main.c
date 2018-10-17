@@ -210,7 +210,7 @@ int main(void)
   alarm_weekday = *(uint8_t *)alarm_weekday_FlashAdress;
   alarm_enable = *(uint8_t *)alarm_enable_FlashAdress;
   shutdown_enable = *(uint8_t *)shutdown_enable_FlashAdress;
-  shutdown_time = *(uint8_t *)shutdown_time_FlashAdress;
+  shutdown_time = *(uint16_t *)shutdown_time_FlashAdress;
   warning_enable=  *(uint8_t *)warning_enable_FlashAdress;
   poweroff_flag = 0;
 

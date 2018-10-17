@@ -140,7 +140,7 @@ uint8_t alarm_weekday;
 
 uint8_t shutdown_flag;
 uint8_t shutdown_time_counter;
-uint8_t shutdown_time;
+uint16_t shutdown_time;
 uint8_t shutdown_enable;
 
 uint8_t warning_enable;

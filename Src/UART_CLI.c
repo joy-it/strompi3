@@ -646,9 +646,9 @@ static portBASE_TYPE prvSetDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 static portBASE_TYPE prvSetTimer( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
 
-	uint8_t timer_sec;
+	uint16_t timer_sec;
 
-	int8_t *pcParameter1;
+	int16_t *pcParameter1;
 	BaseType_t xParameter1StringLength;
 
 	pcParameter1 = FreeRTOS_CLIGetParameter
