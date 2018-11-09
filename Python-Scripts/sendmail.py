@@ -5,8 +5,8 @@ from email.mime.text import MIMEText
 
 SERVER =    'simac-gmbh.de'
 PORT =      587
-EMAIL =    'j.ciszewski@simac-gmbh.de'
-PASSWORT =  '***REMOVED***'
+EMAIL =    ''
+PASSWORT =  'xxx' 
 EMPFAENGER =    ['j.ciszewski@simac-gmbh.de']
 SUBJECT =   'Raspberry Pi STROMAUSFALL!'
 BODY =      """
