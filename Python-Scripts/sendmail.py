@@ -1,13 +1,13 @@
 #! /usr/bin/python
 
-import smtplib
+import smtplibt
 from email.mime.text import MIMEText
 
 SERVER =    'simac-gmbh.de'
 PORT =      587
 EMAIL =    ''
 PASSWORT =  'xxx' 
-EMPFAENGER =    ['j.ciszewski@simac-gmbh.de']
+EMPFAENGER =    ['']
 SUBJECT =   'Raspberry Pi STROMAUSFALL!'
 BODY =      """
 <html>
