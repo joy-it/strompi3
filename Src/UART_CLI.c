@@ -77,7 +77,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-uint32_t shutdownDelay=30000;
+char firmwareVersion[5] = "v1.3";
 
 /* FreeRTOS+IO includes. */
 
@@ -151,6 +151,7 @@ void vUARTCommandConsoleStart( void )
 	  FreeRTOS_CLIRegisterCommand( &xPowerOff );
 	  FreeRTOS_CLIRegisterCommand( &xTimeRPi );
 	  FreeRTOS_CLIRegisterCommand( &xDateRPi );
+	  FreeRTOS_CLIRegisterCommand( &xStatusRPi );
 	  FreeRTOS_CLIRegisterCommand( &xQuitStromPiConsole );
 
 }
@@ -837,6 +838,104 @@ static portBASE_TYPE prvDateRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 	return pdFALSE;
 }
 
+
+/*-----------------------------------------------------------*/
+
+/*** prvStatusRPi
+ *
+ * xxxxxxxxxxxxxxxxxxxxxxxxx
+ *
+ * xxxxxxxxxxxxxxxxxxxxxxxxx
+ *
+ * ***/
+
+static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	( void ) pcCommandString;
+	configASSERT( pcWriteBuffer );
+
+	/* This function assumes the buffer length is adequate. */
+	( void ) xWriteBufferLen;
+
+	uint16_t time;
+	uint32_t date;
+	uint8_t alarm_mode_tmp;
+	uint8_t alarm_time_tmp;
+	uint8_t alarm_date_tmp;
+	uint8_t alarm_weekday_tmp;
+	uint8_t alarm__tmp;
+
+
+	RTC_TimeTypeDef stimestructureget;
+	RTC_DateTypeDef sdatestructureget;
+
+	HAL_RTC_GetTime(&hrtc, &stimestructureget, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
+
+	date = sdatestructureget.Year * 10000 + sdatestructureget.Month * 100 + sdatestructureget.Date;
+	time = stimestructureget.Hours * 10000 + stimestructureget.Minutes * 100 + stimestructureget.Seconds;
+
+	command_order = 1;
+
+	sprintf(( char * ) pcWriteBuffer, "%lu\n" , time);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", date);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", sdatestructureget.WeekDay);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", modus);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_enable);
+
+	if(alarmTime == 1)
+		alarm_mode_tmp=1;
+	else if(alarmDate == 1)
+		alarm_mode_tmp=2;
+	else if(alarmWeekDay == 1)
+		alarm_mode_tmp=3;
+
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_mode_tmp);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_hour);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_min);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_day);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_month);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_weekday);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarmPoweroff);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_hour_off);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_min_off);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", shutdown_enable);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", shutdown_time);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", warning_enable);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[0]);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[1]);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[2]);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[3]);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\n");
+
+	return pdFALSE;
+
+
+}
+
 /*-----------------------------------------------------------*/
 
 /*** prvAlarmMode
@@ -1451,7 +1550,6 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Date: %s %02d.%02d.20%02d\r\n", temp_message, sdatestructureget.Date, sdatestructureget.Month, sdatestructureget.Year);
 
-
 	switch(modus)
 	{
 	case 1:	strcpy(temp_message, "mUSB -> Wide"); break;
@@ -1512,7 +1610,7 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 			}
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Raspberry Pi Shutdown: %s ", temp_message);
 
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Shutdown-Timer: %d seconds \r\n", shutdown_time);
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Shutdown-Timer: %d seconds", shutdown_time);
 
 	switch(warning_enable)
 				{
@@ -1520,6 +1618,12 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 				case 1: strcpy(temp_message, "Enabled"); break;
 				}
 		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Powerfail Warning: %s ", temp_message);
+
+		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n FirmwareVersion: ", temp_message);
+
+		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion, temp_message);
+
+
 
 	/* There is no more data to return after this single string, so return
 	pdFALSE. */

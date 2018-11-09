@@ -81,6 +81,7 @@ static portBASE_TYPE prvShowStatus( int8_t *pcWriteBuffer, size_t xWriteBufferLe
 static portBASE_TYPE prvPowerOff( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvTimeRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvDateRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
 /*** Here you can find  how FreeRTOS needs the command registered
  *
@@ -263,8 +264,15 @@ static const CLI_Command_Definition_t xDateRPi =
 	0
 };
 
-int ascii2int(const char* s);
+static const CLI_Command_Definition_t xStatusRPi =
+{
+	( const int8_t * const ) "status-rpi",
+	( const int8_t * const ) "",
+	prvStatusRPi,
+	0
+};
 
+int ascii2int(const char* s);
 
 
 #endif /* UART_COMMAND_CONSOLE_H */

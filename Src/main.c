@@ -908,6 +908,8 @@ void Alarm_Handler(void)
 				&& alarm_hour_off == stimestructureget.Hours) {
 			    poweroff_flag = 1;
 				ShutdownRPi();
+				alarm_shutdown_time_counter = shutdown_time;
+
 		}
 	}
 
@@ -1133,17 +1135,32 @@ void StartDefaultTask(void const * argument)
 		  }
 	  }
 
+	  /*** If the PowerOff-Alarm has been triggered, then here
+	   * the shutdown-process is shutting down the Powerpath
+	   * connected to the Raspberry Pi  ***/
+
+      if (alarm_shutdown_time_counter > 0)
+	  {
+    	  alarm_shutdown_time_counter--;
+
+		  if (alarm_shutdown_time_counter == 0)
+		  {
+			  Power_Off();
+		  }
+	  }
+
 
       /*** Processing of the shutdown_flag
        * The Counter for the shutdown-timer is set
        * and the warning message for the Raspberry Pi Shutdown
        * is sent out through the serial interface  ***/
 
-	  if (shutdown_enable == 1 && shutdown_flag == 1)
+	  if (shutdown_enable == 1 && shutdown_flag == 1 || alarm_shutdown_enable == 1)
 	  {
 		  shutdown_time_counter = shutdown_time;
 		  ShutdownRPi();
 		  shutdown_flag = 0;
+		  alarm_shutdown_enable = 0;
 		  powerback_flag = 1;
 	  }
 

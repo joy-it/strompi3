@@ -59,8 +59,38 @@ OpenSource-Firmware published under MIT-License
 	If there are questions or something is unclear, please feel free
 	to contact us via E-Mail: service@joy-it.net
 	
-Firmware Updates - Coming Soon:
+******************************************************************************************************************
+	
+Firmware Changelog	
 
-- Battery state of charge in procentÂ Â 
-- read out Battery state of charge through script
+******************************************************************************************************************
+
+Firmware 1.0 – original Firmware Files
+
+Firmware 1.1 – Power Fail Warning
+		- In the configuration terminal a new option has been included „warning-enable <option>“
+		- If this option is enabled, a warning is sent through the serial interface, when the primary voltage source fails – 
+		this option is similar to the function „shutdown-enable“ where a warning is sent out to shutdown the Raspbery Pi
+		
+Firmware 1.2 – PowerBack Detection
+		- After a power failure of the primary voltage source the shutdown-time can now be canceled if in the configured shutdown-time the voltage-source turns back on.
+		In this case there would be an additional message sent out the serial interface which can be processed in a python script for example – a modified serialShutdown.py script is added with this firmware update.
+
+Firmware 1.21 – Fix Shutdown Timer
+		- Bug-Fix: Shutdown Timer can now be set > 255 seconds
+		
+Firmware 1.3 Beta
+		- Bug-Fix: PowerOff-Alarm Fixed
+		- StromPi3_Status.py Support: Now it is possible to read out the Configuration of the StromPi3 through a python Script.
+		  It is also possible to read out the current ADC Voltage Values (like the current battery volatge) and process them in own python functions
+		- Firmware Version Output in "show-status" function
+
+******************************************************************************************************************
+	
+Firmware Updates - Coming Soon (will be finished until 12.11.2018):
+
+******************************************************************************************************************
+
+- Battery state of charge in procent
 - automatic shutdown at low Battery levels
+- "Serial-less" Mode: It would be possible to use the StromPi3 without the serial interface.
