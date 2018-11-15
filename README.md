@@ -84,12 +84,25 @@ Firmware 1.3 Beta
 		  It is also possible to read out the current ADC Voltage Values (like the current battery volatge) and process them in own python functions
 - Firmware Version Output in "show-status" function
 
+Firmware 1.4
+- Serial-Less Mode:
+ If the Serial-Interface is blocked by another HAT or an other module,
+ it is possible to use the StromPi3 in a Serial-Less Mode.
+ In this case the Shutdown-Signal is not sent out through the serial Interface as a message,
+ but is indicated through a connected GPIO-LINE (Like in the previous versions of the StromPi family)
+ As for this needed extra connection, please refer to the manuals located in the "SerialLess" Folder
+- Battery-Voltagelevel percentage output in "adc-output"
+- Charging State Output
+- Batterylevel-Shutdown:
+ The Battery-Voltage is measured and then mapped on 4 available voltage levels (1:10%, 2:25%, 3:50%, 4:100%)
+ at the end of the main-Task. In the case the Batterylevel-Shutdown is configured,
+ the StromPi3 give a shutdown-signal to the Raspberry Pi and cuts of the PowerPath in a fixed 10 seconds timer,
+ when the Battery has been discharged to the configured level.
+
 ******************************************************************************************************************
 	
-Firmware Updates - Coming Soon (will be finished until 12.11.2018):
+Request Firmware Updates:
 
 ******************************************************************************************************************
 
-- Battery state of charge in procent
-- automatic shutdown at low Battery levels
-- "Serial-less" Mode: It would be possible to use the StromPi3 without the serial interface.
+If you would need a function which isn't currently included in the StromPi3, please feel free to contact us via Mail (service@joy-it.net), so we can include it in our next Firmware-Updates

@@ -211,7 +211,10 @@ int main(void)
   alarm_enable = *(uint8_t *)alarm_enable_FlashAdress;
   shutdown_enable = *(uint8_t *)shutdown_enable_FlashAdress;
   shutdown_time = *(uint16_t *)shutdown_time_FlashAdress;
-  warning_enable=  *(uint8_t *)warning_enable_FlashAdress;
+  warning_enable =  *(uint8_t *)warning_enable_FlashAdress;
+  serialLessMode =  *(uint8_t *)serialLessMode_FlashAdress;
+  batLevel_shutdown =  *(uint8_t *)batLevel_shutdown_FlashAdress;
+
   poweroff_flag = 0;
 
 
@@ -244,7 +247,6 @@ int main(void)
 
   /*** Only for manufacturing | Checks if the Flash Area of the STM32F031 is blank - in this case it preprogrmm it with a default configuration ***/
   initialCheck();
-
 
 
 /*********************************************************************************/
@@ -581,7 +583,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, CTRL_VUSB_Pin|RESET_Rasp_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, CTRL_VUSB_Pin|RESET_Rasp_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, CTRL_VREG5_Pin|BOOST_EN_Pin|CTRL_L7987_Pin, GPIO_PIN_SET);
@@ -624,6 +626,7 @@ static void MX_GPIO_Init(void)
 
 void Power_Wide(void)
 {
+	charging = 1;
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_RESET);
@@ -631,6 +634,7 @@ void Power_Wide(void)
 
 void Power_USB(void)
 {
+	charging = 1;
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
@@ -638,6 +642,7 @@ void Power_USB(void)
 
 void Power_Bat(void)
 {
+	charging = 0;
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_RESET);
@@ -645,22 +650,36 @@ void Power_Bat(void)
 
 void Power_Off(void)
 {
+	charging = 0;
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_RESET);
 }
+
 
 /*********************************************************************************/
 
 /*** Functions to output the warning message, when the state of the StromPi3 have changes
  *
  * 		- ShutdownRPi() sends the warning to shutdown the Raspberry Pi when the primary voltage source fails
+ * 			- If the Serial-Less Mode is acticvated, the warning is not sent through the serial interface,
+ * 			  but is processed through the connected GPIO-Line in the Raspberry Pi
  * 		- PowerBack() sends a message when the primary voltage source comes back
  * 		- PowerfailWarning() sends the warning when the primary voltage source fails but its message doesn't shutdown the RPi
+ *
  * 																							  ***/
 void ShutdownRPi(void)
 {
-	HAL_UART_Transmit(&huart1, (uint8_t *)shutdownMessage, sizeof(shutdownMessage), sizeof(shutdownMessage));
+	if (serialLessMode)
+	{
+		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_RESET);
+		osDelay(100);
+		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_SET);
+	}
+	else
+	{
+		HAL_UART_Transmit(&huart1, (uint8_t *)shutdownMessage, sizeof(shutdownMessage), sizeof(shutdownMessage));
+	}
 }
 
 void PowerBack(void)
@@ -847,6 +866,9 @@ void flashConfig(void)
 	  flashValue(shutdown_enable_FlashAdress,shutdown_enable);
 	  flashValue(shutdown_time_FlashAdress,shutdown_time);
 	  flashValue(warning_enable_FlashAdress,warning_enable);
+	  flashValue(serialLessMode_FlashAdress,serialLessMode);
+	  flashValue(batLevel_shutdown_FlashAdress,batLevel_shutdown);
+
 
 	HAL_FLASH_Lock();
 
@@ -1023,7 +1045,7 @@ void Alarm_Handler(void)
 
 void initialCheck(void)
 {
-	  if (modus == 0xFF)
+	  if (batLevel_shutdown == 0xFF)
 	  {
 		  modus = 1;
 		  alarmDate = 0;
@@ -1041,6 +1063,8 @@ void initialCheck(void)
 		  shutdown_enable = 0;
 		  shutdown_time = 10;
 		  warning_enable = 1;
+		  serialLessMode =  0;
+		  batLevel_shutdown =  0;
 
 		  flashConfig();
 	  }
@@ -1132,6 +1156,7 @@ void StartDefaultTask(void const * argument)
 		  if (shutdown_time_counter == 0)
 		  {
 			  Power_Off();
+			  batLevel_shutdown_flag = 0;
 		  }
 	  }
 
@@ -1155,7 +1180,7 @@ void StartDefaultTask(void const * argument)
        * and the warning message for the Raspberry Pi Shutdown
        * is sent out through the serial interface  ***/
 
-	  if (shutdown_enable == 1 && shutdown_flag == 1 || alarm_shutdown_enable == 1)
+	  if (shutdown_enable == 1 && shutdown_flag == 1 || alarm_shutdown_enable == 1 )
 	  {
 		  shutdown_time_counter = shutdown_time;
 		  ShutdownRPi();
@@ -1232,6 +1257,59 @@ void StartDefaultTask(void const * argument)
 	  measuredValue[2] = VDDValue*rawValue[2]/4095*15100/5100;
 	  measuredValue[3] = VDDValue*rawValue[3]/4095*15100/5100;
 
+
+      /***
+       * In this part the measured Battery Voltage is mapped on 4 Voltage-Levels
+       * (1:10%, 2:25%, 3:50%, 4:100%) for printing out in the adc-output command
+       * or for processing of the Batterylevel-Shutdown Function.
+       *
+       * If the Powerpath mUSB or Wide has been selected, the variable charging is changed to 1
+       * and is indicating that the battery-charging circuit is turned in.
+       * In this case the Battery-Voltage is increased through the nature of the circuit
+       * so in this case a Offset is calculated into the Battery-Level ***/
+
+	  if (charging == 0)
+	  {
+		  if (measuredValue[1] > 3220)
+			  batLevel = 4;
+		  else if (measuredValue[1] <= 3220 &&  measuredValue[1] > 3180)
+			  batLevel = 3;
+		  else if (measuredValue[1] <= 3180 &&  measuredValue[1] > 3140)
+			  batLevel = 2;
+		  else if (measuredValue[1] <= 3140 &&  measuredValue[1] > 2500)
+			  batLevel = 1;
+		  else
+			  batLevel = 0;
+	  }
+	  else
+	  {
+		  if (measuredValue[1] > (3220+chargingOffset))
+			  batLevel = 4;
+		  else if (measuredValue[1] <= (3220+chargingOffset) &&  measuredValue[1] > (3180+chargingOffset))
+			  batLevel = 3;
+		  else if (measuredValue[1] <= (3180+chargingOffset) &&  measuredValue[1] > (3140+chargingOffset))
+			  batLevel = 2;
+		  else if (measuredValue[1] <= (3140+chargingOffset) &&  measuredValue[1] > (2500+chargingOffset))
+			  batLevel = 1;
+		  else
+			  batLevel = 0;
+	  }
+
+
+      /*** Processing of the Batterylevel-Shutdown Function.
+       * After a check if the Battery is currently charging, the next part checks if the Battery is currently attached
+       * and if the Batterylevel is under the configured Shutdown-Level ***/
+
+	  if (batLevel_shutdown > 0 && charging != 1)
+	  {
+		  if (batLevel <= batLevel_shutdown && rawValue[1] > minBatConnect && batLevel_shutdown_flag == 0)
+		  {
+			  ShutdownRPi();
+			  shutdown_time_counter = 10;
+			  batLevel_shutdown_flag = 1;
+		  }
+
+	  }
 
 	  /*** A small protection function for the Battery.  ***/
 	  if (measuredValue[3] < minBat && powerBat_flag == 1 )

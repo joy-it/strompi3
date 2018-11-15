@@ -76,12 +76,14 @@ static portBASE_TYPE prvAlarmDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 static portBASE_TYPE prvAlarmPowerOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvAlarmPowerOffEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvShutdownEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvSerialLessMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvWarning( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvShowStatus( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvPowerOff( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvTimeRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvDateRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvBatLevelShutdown( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
 /*** Here you can find  how FreeRTOS needs the command registered
  *
@@ -270,6 +272,22 @@ static const CLI_Command_Definition_t xStatusRPi =
 	( const int8_t * const ) "",
 	prvStatusRPi,
 	0
+};
+
+static const CLI_Command_Definition_t xSerialLessMode =
+{
+	( const int8_t * const ) "serialless-mode",
+	( const int8_t * const ) "serialless-mode:\r\n Enables <1> or disables <0> the Serial-Less Mode of the StromPi3\r\n\r\n",
+	prvSerialLessMode,
+	1
+};
+
+static const CLI_Command_Definition_t xBatLevelShutdown =
+{
+	( const int8_t * const ) "batlevel-shutdown",
+	( const int8_t * const ) "batlevel-shutdown <level-number>:\r\n Configures the StromPi 3 to shutdown the Raspberry Pi when the Battery Level\r\n falls below the configured Battery-Voltagelevel:\r\n  Mode 0: Disabled\r\n  Mode 1: Below 10%\r\n  Mode 2: Below 25%\r\n  Mode 3: Below 50%\r\n\r\n",
+	prvBatLevelShutdown,
+	1
 };
 
 int ascii2int(const char* s);

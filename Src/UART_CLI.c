@@ -77,7 +77,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[5] = "v1.3";
+char firmwareVersion[5] = "v1.4";
 
 /* FreeRTOS+IO includes. */
 
@@ -152,6 +152,8 @@ void vUARTCommandConsoleStart( void )
 	  FreeRTOS_CLIRegisterCommand( &xTimeRPi );
 	  FreeRTOS_CLIRegisterCommand( &xDateRPi );
 	  FreeRTOS_CLIRegisterCommand( &xStatusRPi );
+	  FreeRTOS_CLIRegisterCommand( &xSerialLessMode );
+	  FreeRTOS_CLIRegisterCommand( &xBatLevelShutdown );
 	  FreeRTOS_CLIRegisterCommand( &xQuitStromPiConsole );
 
 }
@@ -328,6 +330,7 @@ static portBASE_TYPE prvADCOutput( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 	/* This function assumes the buffer length is adequate. */
 	( void ) xWriteBufferLen;
 
+
 	if (rawValue[0] > minWide)
 	{
 		sprintf(( char * ) pcWriteBuffer, "****************************\r\nWide-Range-Inputvoltage: %d.%03d V",  measuredValue[0]/1000, measuredValue[0]%1000);
@@ -339,6 +342,31 @@ static portBASE_TYPE prvADCOutput( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 	if (rawValue[1] > minBatConnect)
 	{
 		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\nLifePo4-Batteryvoltage: %d.%03d V", measuredValue[1]/1000, measuredValue[1]%1000);
+
+		switch (batLevel)
+			    {
+			    	case 1:
+			    				sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer)," [10%%]");
+								break;
+
+			    	case 2:
+			    				sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer)," [25%%]");
+			    	    		break;
+
+			    	case 3:
+			    				sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer)," [50%%]");
+			    	    		break;
+
+			    	case 4:
+			    				sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer)," [100%%]");
+			    	    		break;
+
+			    }
+
+		if (charging == 1)
+		{
+			sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer)," [charging]");
+		}
 	}
 	else
 	{
@@ -843,9 +871,9 @@ static portBASE_TYPE prvDateRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 
 /*** prvStatusRPi
  *
- * xxxxxxxxxxxxxxxxxxxxxxxxx
- *
- * xxxxxxxxxxxxxxxxxxxxxxxxx
+ * This command is needed for the StromPi3_Status.py script.
+ * It is gathering all of the variables currently active and prepares them for transfer
+ * through the serial interface.
  *
  * ***/
 
@@ -919,6 +947,14 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", warning_enable);
 
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", serialLessMode);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", batLevel_shutdown);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", batLevel);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", charging);
+
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[0]);
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[1]);
@@ -935,6 +971,7 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 
 }
+
 
 /*-----------------------------------------------------------*/
 
@@ -1513,6 +1550,134 @@ static portBASE_TYPE prvShutdownEnable( int8_t *pcWriteBuffer, size_t xWriteBuff
 
 /*-----------------------------------------------------------*/
 
+/*** prvBatLevelShutdown
+ *  This command configures the Batterylevel-Shutdown function.
+ *  The Battery-Voltage is measured and then mapped on 4 available voltage levels (1:10%, 2:25%, 3:50%, 4:100%)
+ *  at the end of the main-Task. In the case the Batterylevel-Shutdown is configured,
+ *  the StromPi3 give a shutdown-signal to the Raspberry Pi and cuts of the PowerPath in a fixed 10 seconds timer,
+ *  when the Battery has been discharged to the configured level. *
+ *
+ * ***/
+
+static portBASE_TYPE prvBatLevelShutdown( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+
+	uint8_t batLevel_shutdown_temp;
+
+	int8_t *pcParameter1;
+	BaseType_t xParameter1StringLength;
+
+	pcParameter1 = FreeRTOS_CLIGetParameter
+	                    (
+	                      /* The command string itself. */
+	                      pcCommandString,
+	                      /* Return the first parameter. */
+	                      1,
+	                      /* Store the parameter string length. */
+	                      &xParameter1StringLength
+	                    );
+
+	( void ) pcCommandString;
+	configASSERT( pcWriteBuffer );
+
+	/* This function assumes the buffer length is adequate. */
+	( void ) xWriteBufferLen;
+
+    pcParameter1[ xParameter1StringLength ] = 0x00;
+
+    batLevel_shutdown_temp = ascii2int(pcParameter1);
+
+    batLevel_shutdown = batLevel_shutdown_temp;
+
+    flashConfig();
+
+    switch (batLevel_shutdown)
+        {
+
+			case 0:
+						sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been disabled");
+						break;
+        	case 1:
+    					sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 10%%");
+    					break;
+        	case 2:
+        	    		sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 25%%");
+        	    		break;
+        	case 3:
+    					sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 50%%");
+    					break;
+
+        }
+
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+
+/*** prvSerialLessMode
+ *
+ * If the Serial-Interface is blocked by another HAT or an other module,
+ * it is possible to use the StromPi3 in a Serial-Less Mode.
+ * In this case the Shutdown-Signal is not sent out through the serial Interface as a message,
+ * but is indicated through a connected GPIO-LINE (Like in the previous versions of the StromPi family)
+ * As for this needed extra connection, please refer to the manuals located in the "SerialLess" Folder
+ *
+ * ***/
+
+static portBASE_TYPE prvSerialLessMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+
+	uint8_t serialLessMode_temp;
+
+	int8_t *pcParameter1;
+	BaseType_t xParameter1StringLength;
+
+	pcParameter1 = FreeRTOS_CLIGetParameter
+	                    (
+	                      /* The command string itself. */
+	                      pcCommandString,
+	                      /* Return the first parameter. */
+	                      1,
+	                      /* Store the parameter string length. */
+	                      &xParameter1StringLength
+	                    );
+
+	( void ) pcCommandString;
+	configASSERT( pcWriteBuffer );
+
+	/* This function assumes the buffer length is adequate. */
+	( void ) xWriteBufferLen;
+
+    pcParameter1[ xParameter1StringLength ] = 0x00;
+
+    serialLessMode_temp = ascii2int(pcParameter1);
+
+    serialLessMode = serialLessMode_temp;
+
+    flashConfig();
+
+    switch (serialLessMode_temp)
+        {
+        	case 0:
+    					sprintf(( char * ) pcWriteBuffer,"The StromPi3 Serial-Less Mode has been deactivated");
+    					break;
+
+        	case 1:
+        	    		sprintf(( char * ) pcWriteBuffer,"The StromPi3 Serial-Less Mode has been enabled");
+        	    		break;
+
+        }
+
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+
+/*-----------------------------------------------------------*/
+
 /*** prvShowStatus
  * This command sums up all of the configuration data in the StromPi 3
  * and outputs it into the serial console.
@@ -1619,11 +1784,32 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 				}
 		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Powerfail Warning: %s ", temp_message);
 
-		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n FirmwareVersion: ", temp_message);
+	switch(serialLessMode)
+					{
+					case 0:	strcpy(temp_message, "Disabled"); break;
+					case 1: strcpy(temp_message, "Enabled"); break;
+					}
+			sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Serial-Less Mode: %s ", temp_message);
 
-		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion, temp_message);
+	switch(batLevel_shutdown)
+						{
+							case 0:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: Disabled");
+										break;
+							case 1:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 10%%");
+										break;
+							case 2:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 25%%");
+										break;
+							case 3:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 50%%");
+										break;
+						}
 
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n FirmwareVersion: ", temp_message);
 
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion, temp_message);
 
 	/* There is no more data to return after this single string, so return
 	pdFALSE. */
