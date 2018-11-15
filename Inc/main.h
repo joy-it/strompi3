@@ -159,24 +159,24 @@ uint8_t charging;
 
 #define chargingOffset 90
 
-#define modus_FlashAdress 0x8007F70
-#define alarmDate_FlashAdress 0x8007F74
-#define alarmWeekDay_FlashAdress 0x8007F78
-#define alarmTime_FlashAdress 0x8007F7C
-#define alarmPoweroff_FlashAdress 0x8007F80
-#define alarm_min_FlashAdress 0x8007F84
-#define alarm_hour_FlashAdress 0x8007F88
-#define alarm_min_off_FlashAdress 0x8007F8C
-#define alarm_hour_off_FlashAdress 0x8007F90
-#define alarm_day_FlashAdress 0x8007F94
-#define alarm_month_FlashAdress 0x8007F98
-#define alarm_weekday_FlashAdress 0x8007F9C
-#define alarm_enable_FlashAdress 0x8007FA0
-#define shutdown_enable_FlashAdress 0x8007FA4
-#define shutdown_time_FlashAdress 0x8007FA8
-#define warning_enable_FlashAdress 0x8007FAC
-#define serialLessMode_FlashAdress 0x8007FB0
-#define batLevel_shutdown_FlashAdress 0x8007FB4
+#define modus_FlashAdress 0x8007C00
+#define alarmDate_FlashAdress 0x8007C10
+#define alarmWeekDay_FlashAdress 0x8007C20
+#define alarmTime_FlashAdress 0x8007C30
+#define alarmPoweroff_FlashAdress 0x8007C40
+#define alarm_min_FlashAdress 0x8007C50
+#define alarm_hour_FlashAdress 0x8007C60
+#define alarm_min_off_FlashAdress 0x8007C70
+#define alarm_hour_off_FlashAdress 0x8007C80
+#define alarm_day_FlashAdress 0x8007C90
+#define alarm_month_FlashAdress 0x8007CA0
+#define alarm_weekday_FlashAdress 0x8007CB0
+#define alarm_enable_FlashAdress 0x8007CC0
+#define shutdown_enable_FlashAdress 0x8007CD0
+#define shutdown_time_FlashAdress 0x8007CE0
+#define warning_enable_FlashAdress 0x8007CF0
+#define serialLessMode_FlashAdress 0x8007D00
+#define batLevel_shutdown_FlashAdress 0x8007D10
 
 void flashConfig(void);
 void flashValue(uint32_t address, uint32_t data);
