@@ -41,6 +41,34 @@ def alarm_mode_converter(argument):
     }
     return switcher.get(argument, "nothing")
 
+def batterylevel_shutdown_converter(argument):
+    switcher = {
+        0: "Disabled",
+        1: "10%",
+        2: "25%",
+        3: "50%",
+    }
+    return switcher.get(argument, "nothing")
+
+def batterylevel_converter(batterylevel,charging):
+
+    if charging:
+        switcher = {
+            1: " [10%] [charging]",
+            2: " [25%] [charging]",
+            3: " [50%] [charging]",
+            4: " [100%] [charging]",
+        }
+        return switcher.get(batterylevel, "nothing")
+    else:
+        switcher = {
+            1: " [10%]",
+            2: " [25%]",
+            3: " [50%]",
+            4: " [100%]",
+        }
+        return switcher.get(batterylevel, "nothing")
+
 serial_port = serial.Serial()
 
 serial_port.baudrate = 38400
@@ -54,10 +82,6 @@ if serial_port.isOpen(): serial_port.close()
 serial_port.open()
 
 try:
-    serial_port.write('quit')
-    sleep(1)
-    serial_port.write('\x0D')
-    sleep(1)
     serial_port.write('status-rpi')
     sleep(0.1)
     serial_port.write('\x0D')
@@ -78,11 +102,16 @@ try:
     sp3_shutdown_enable = serial_port.readline(9999);
     sp3_shutdown_time = serial_port.readline(9999);
     sp3_warning_enable = serial_port.readline(9999);
+    sp3_serialLessMode = serial_port.readline(9999);
+    sp3_batLevel_shutdown = serial_port.readline(9999);
+    sp3_batLevel = serial_port.readline(9999);
+    sp3_charging = serial_port.readline(9999);
     sp3_ADC_Wide = float(serial_port.readline(9999))/1000;
     sp3_ADC_BAT = float(serial_port.readline(9999))/1000;
     sp3_ADC_USB = float(serial_port.readline(9999))/1000;
     sp3_ADC_OUTPUT = float(serial_port.readline(9999))/1000;
     sp3_firmwareVersion = serial_port.readline(9999);
+
 
     date = int(sp3_date)
 
@@ -100,7 +129,7 @@ try:
         wide_range_volt = ' not connected'
 
     if sp3_ADC_BAT > battery_volt_min:
-        battery_volt = str(sp3_ADC_BAT) + 'V'
+        battery_volt = str(sp3_ADC_BAT) + 'V' + batterylevel_converter(int(sp3_batLevel),int(sp3_charging))
     else:
         battery_volt = ' not connected'
 
@@ -131,6 +160,12 @@ try:
     print ' '
     print 'Raspberry Pi Shutdown: ' + enabled_disabled_converter(int(sp3_shutdown_enable))
     print ' Shutdown-Timer: ' + sp3_shutdown_time.rstrip('\n').zfill(2) + ' seconds'
+    print ' '
+    print 'Powerfail Warning: ' + enabled_disabled_converter(int(sp3_warning_enable))
+    print ' '
+    print 'Serial-Less Mode: ' + enabled_disabled_converter(int(sp3_serialLessMode))
+    print ' '
+    print 'Battery-Level Shutdown: ' + batterylevel_shutdown_converter(int(sp3_batLevel_shutdown))
     print ' '
     print 'Firmware Version: ' + sp3_firmwareVersion.rstrip('\n')
     print ' '
