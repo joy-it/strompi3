@@ -77,7 +77,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[5] = "v1.4";
+char firmwareVersion[6] = "v1.41";
 
 /* FreeRTOS+IO includes. */
 
@@ -885,7 +885,7 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 	/* This function assumes the buffer length is adequate. */
 	( void ) xWriteBufferLen;
 
-	uint16_t time;
+	uint32_t time;
 	uint32_t date;
 	uint8_t alarm_mode_tmp;
 	uint8_t alarm_time_tmp;
