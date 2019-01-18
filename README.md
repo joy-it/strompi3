@@ -98,6 +98,17 @@ Firmware 1.4
  at the end of the main-Task. In the case the Batterylevel-Shutdown is configured,
  the StromPi3 give a shutdown-signal to the Raspberry Pi and cuts of the PowerPath in a fixed 10 seconds timer,
  when the Battery has been discharged to the configured level.
+ 
+Firmware 1.5
+- Interval Function: 
+ Through this mode the StromPi3 can start the Powerpath for X Minutes, then it shuts down the Raspberry Pi with a serial command (Python Script have to be active in the background) and then it poweroff the main Powerpath.
+ After the configured X "Off-Time" the StromPi3 turns the PowerPath on for another X Minutes "On-Time"
+- sspc Command:
+ The Terminal Console can be also started through this new command ["sspc"] additionally to the ["startstrompiconsole"]
+- PowerOn Button:
+ Now after the StromPi3 have powered off the PowerPath, the main PowerPathcan be started manually through shorting of the ResetPin of the StromPi3 - for this there have to be made an additional connection on the SP3 PCB; for this please refer to the manual in the PowerOnButton Folder
+- poweroff Command:
+ There was a bugfix included in this command
 
 ******************************************************************************************************************
 	
