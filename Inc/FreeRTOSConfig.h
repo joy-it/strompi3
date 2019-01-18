@@ -156,7 +156,7 @@ header file. */
 /* USER CODE BEGIN 1 */   
 #define configASSERT( x ) if ((x) == 0) {taskDISABLE_INTERRUPTS(); for( ;; );} 
 
-#define configCOMMAND_INT_MAX_OUTPUT_SIZE		512
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE		600
 
 #define configUART_COMMAND_CONSOLE_TASK_PRIORITY	( 3U )
 #define configUART_COMMAND_CONSOLE_STACK_SIZE		( configMINIMAL_STACK_SIZE * 3 )

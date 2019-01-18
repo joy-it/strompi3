@@ -66,6 +66,7 @@ static portBASE_TYPE prvMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, con
 static portBASE_TYPE prvSetClock( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvSetTimer( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvStartStromPiConsole( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvStartStromPiConsoleQuick( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvQuitStromPiConsole( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvSetDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvAlarmMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
@@ -75,6 +76,9 @@ static portBASE_TYPE prvAlarmWeekday( int8_t *pcWriteBuffer, size_t xWriteBuffer
 static portBASE_TYPE prvAlarmDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvAlarmPowerOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvAlarmPowerOffEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvAlarmIntervalEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvAlarmIntervalOnTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvAlarmIntervalOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvShutdownEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvSerialLessMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvWarning( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
@@ -129,6 +133,15 @@ static const CLI_Command_Definition_t xStartStromPiConsole =
 	//startstrompiconsole:\r\n Terminal-Console wird auf dem StromPi gestartet\r\n\r\n
 };
 
+static const CLI_Command_Definition_t xStartStromPiConsoleQuick =
+{
+	( const int8_t * const ) "sspc",
+	( const int8_t * const ) "",
+	prvStartStromPiConsoleQuick,
+	0
+	//startstrompiconsole:\r\n Terminal-Console wird auf dem StromPi gestartet\r\n\r\n
+};
+
 static const CLI_Command_Definition_t xQuitStromPiConsole =
 {
 	( const int8_t * const ) "quit",
@@ -149,7 +162,7 @@ static const CLI_Command_Definition_t xADCOutput =
 static const CLI_Command_Definition_t xMode =
 {
 	( const int8_t * const ) "strompi-mode",
-	( const int8_t * const ) "strompi-mode <mode-number>:\r\n Configures the mode of the StromPi 3:\r\n  Mode 1: mUSB -> Wide\r\n  Mode 2: Wide-> mUSB\r\n  Mode 3: mUSB -> Battery\r\n  Mode 4: Wide -> Battery\r\n\r\n",
+	( const int8_t * const ) "strompi-mode <mode-number>:\r\n Configures the mode of the StromPi 3:\r\n  Mode 1: mUSB -> Wide\r\n  Mode 2: Wide -> mUSB\r\n  Mode 3: mUSB -> Battery\r\n  Mode 4: Wide -> Battery\r\n\r\n",
 	prvMode,
 	1
 };
@@ -217,6 +230,31 @@ static const CLI_Command_Definition_t xAlarmPowerOffEnable =
 	prvAlarmPowerOffEnable,
 	1
 };
+
+static const CLI_Command_Definition_t xAlarmIntervalEnable =
+{
+	( const int8_t * const ) "interval-enable",
+	( const int8_t * const ) "interval-enable <option>:\r\n Enables <1> or disables <0> the PowerOff-Interval-Alarm\r\n\r\n",
+	prvAlarmIntervalEnable,
+	1
+};
+
+static const CLI_Command_Definition_t xAlarmIntervalOnTime =
+{
+	( const int8_t * const ) "interval-ontime",
+	( const int8_t * const ) "interval-ontime <min>:\r\n Defines the OnTime of the PowerOff-Interval-Alarm in Minutes\r\n\r\n",
+	prvAlarmIntervalOnTime,
+	1
+};
+
+static const CLI_Command_Definition_t xAlarmIntervalOffTime =
+{
+	( const int8_t * const ) "interval-offtime",
+	( const int8_t * const ) "interval-offtime <min>:\r\n Defines the OffTime of the PowerOff-Interval-Alarm in Minutes\r\n\r\n",
+	prvAlarmIntervalOffTime,
+	1
+};
+
 
 static const CLI_Command_Definition_t xWarning =
 {

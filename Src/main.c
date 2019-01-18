@@ -214,9 +214,14 @@ int main(void)
   warning_enable =  *(uint8_t *)warning_enable_FlashAdress;
   serialLessMode =  *(uint8_t *)serialLessMode_FlashAdress;
   batLevel_shutdown =  *(uint8_t *)batLevel_shutdown_FlashAdress;
+  alarmInterval = *(uint8_t *)alarmInterval_FlashAdress;
+  alarmIntervalMinOn = *(uint16_t *)alarmIntervalMinOn_FlashAdress;
+  alarmIntervalMinOff = *(uint16_t *)alarmIntervalMinOff_FlashAdress;
+
+  alarmIntervalMinOn_Counter = alarmIntervalMinOn;
+  alarmIntervalMinOff_Counter = alarmIntervalMinOff;
 
   poweroff_flag = 0;
-
 
   /* USER CODE END 1 */
 
@@ -245,7 +250,7 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-  /*** Only for manufacturing | Checks if the Flash Area of the STM32F031 is blank - in this case it preprogrmm it with a default configuration ***/
+  /*** Only for manufacturing | Checks if the Flash Area of the STM32F031 is blank - in this case it preprogramm it with a default configuration ***/
   initialCheck();
 
 
@@ -615,6 +620,34 @@ static void MX_GPIO_Init(void)
 
 /*********************************************************************************/
 /*
+ * Functions to change the Reset Pin Function for the Serial-Less Mode and the PowerON Button
+ */
+
+void Config_Reset_Pin_Input(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	GPIO_InitStruct.Pin = RESET_Rasp_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(RESET_Rasp_GPIO_Port, &GPIO_InitStruct);
+}
+
+void Config_Reset_Pin_Output(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	GPIO_InitStruct.Pin = RESET_Rasp_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(RESET_Rasp_GPIO_Port, &GPIO_InitStruct);
+}
+
+
+/*********************************************************************************/
+/*
  * Functions to change the PowerPath
  *
  *
@@ -672,6 +705,7 @@ void ShutdownRPi(void)
 {
 	if (serialLessMode)
 	{
+		Config_Reset_Pin_Output();
 		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_RESET);
 		osDelay(100);
 		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_SET);
@@ -796,6 +830,11 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 		}
 	}
 
+	if (manual_poweroff_flag == 1)
+	{
+		poweroff_flag = 0;
+		manual_poweroff_flag = 0;
+	}
 
 	/*** If the Shutdown-Timer is configured, then the shutdown_flag is activated here
 	 * so the shutdown-timer can be started and the shutdown message for the raspberry pi can be sent through the serial interface ***/
@@ -868,6 +907,9 @@ void flashConfig(void)
 	  flashValue(warning_enable_FlashAdress,warning_enable);
 	  flashValue(serialLessMode_FlashAdress,serialLessMode);
 	  flashValue(batLevel_shutdown_FlashAdress,batLevel_shutdown);
+	  flashValue(alarmInterval_FlashAdress,alarmInterval);
+	  flashValue(alarmIntervalMinOn_FlashAdress,alarmIntervalMinOn);
+	  flashValue(alarmIntervalMinOff_FlashAdress,alarmIntervalMinOff);
 
 
 	HAL_FLASH_Lock();
@@ -924,12 +966,16 @@ void Alarm_Handler(void)
 	HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
 
  /*** This part handles the preprogrammed shutdown function  ***/
+
+
+
 	if(alarmPoweroff == 1)
 	{
 		if (alarm_min_off == stimestructureget.Minutes
 				&& alarm_hour_off == stimestructureget.Hours) {
 			    poweroff_flag = 1;
 				ShutdownRPi();
+				Config_Reset_Pin_Input();
 				alarm_shutdown_time_counter = shutdown_time;
 
 		}
@@ -941,10 +987,48 @@ void Alarm_Handler(void)
 		if(alarmTime == 1)
 		{
 			if (alarm_min == stimestructureget.Minutes && alarm_hour == stimestructureget.Hours)
-				{
-					poweroff_flag = 0;
-				}
+			{
+				if (modus == 1 || modus == 3)
+				  {
+					  if (rawValue[2] > minUSB)
+					  {
+						  poweroff_flag = 0;
+						  Power_USB();
+					  }
+					  else if (modus == 1)
+					  {
+						  poweroff_flag = 0;
+						  Power_Wide();
+					  }
+					  else if (modus == 3)
+					  {
+						  poweroff_flag = 0;
+						  Power_Bat();
+						  powerBat_flag = 1;
+					  }
+				  }
+
+				  else if (modus == 2 || modus == 4)
+				  {
+					  if (rawValue[0] > minWide)
+					  {
+						  poweroff_flag = 0;
+						  Power_Wide();
+					  }
+					  else if (modus == 2)
+					  {
+						  poweroff_flag = 0;
+						  Power_USB();
+					  }
+					  else if (modus == 4)
+					  {
+						  poweroff_flag = 0;
+						  Power_Bat();
+						  powerBat_flag = 1;
+					  }
+				  }
 			}
+		}
 		else if(alarmWeekDay == 1)
 		{
 			if ( alarm_min == stimestructureget.Minutes && alarm_hour == stimestructureget.Hours && alarm_weekday == sdatestructureget.WeekDay)
@@ -1037,6 +1121,38 @@ void Alarm_Handler(void)
 			}
 		}
 	}
+
+	if(alarmInterval == 1)
+	{
+		if (alarmIntervalMinOn_Counter == 0 && poweroff_flag == 1) {
+
+			if (alarmIntervalMinOff_Counter > 0 ) {
+
+				alarmIntervalMinOff_Counter--;
+			}
+
+			if (alarmIntervalMinOff_Counter == 0)
+			{
+				poweroff_flag = 0;
+				alarmIntervalMinOn_Counter = alarmIntervalMinOn+1;
+			}
+
+		}
+
+		if (alarmIntervalMinOn_Counter > 0 ) {
+
+			alarmIntervalMinOn_Counter--;
+		}
+
+		if (alarmIntervalMinOn_Counter == 0)
+		{
+		    poweroff_flag = 1;
+			ShutdownRPi();
+			alarm_shutdown_time_counter = shutdown_time;
+		}
+
+	}
+
 }
 
 /*********************************************************************************/
@@ -1045,7 +1161,7 @@ void Alarm_Handler(void)
 
 void initialCheck(void)
 {
-	  if (batLevel_shutdown == 0xFF)
+	  if (alarmInterval == 0xFF)
 	  {
 		  modus = 1;
 		  alarmDate = 0;
@@ -1065,6 +1181,10 @@ void initialCheck(void)
 		  warning_enable = 1;
 		  serialLessMode =  0;
 		  batLevel_shutdown =  0;
+		  alarmInterval = 0;
+		  alarmIntervalMinOn = 0;
+		  alarmIntervalMinOff = 0;
+
 
 		  flashConfig();
 	  }
@@ -1145,6 +1265,60 @@ void StartDefaultTask(void const * argument)
 		  sek=0;
 	  }
 	  sek++;
+
+	  if(poweroff_flag == 1 && power_on_button_counter<= 30)
+	  {
+		  power_on_button_counter++;
+
+		  if (power_on_button_counter > 30)
+		  {
+
+			  if(HAL_GPIO_ReadPin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin) == 1)
+			  {
+			  power_on_button_counter = 0;
+
+			  if (modus == 1 || modus == 3)
+			  				  {
+			  					  if (rawValue[2] > minUSB)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_USB();
+			  					  }
+			  					  else if (modus == 1)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_Wide();
+			  					  }
+			  					  else if (modus == 3)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_Bat();
+			  						  powerBat_flag = 1;
+			  					  }
+			  				  }
+
+			  				  else if (modus == 2 || modus == 4)
+			  				  {
+			  					  if (rawValue[0] > minWide)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_Wide();
+			  					  }
+			  					  else if (modus == 2)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_USB();
+			  					  }
+			  					  else if (modus == 4)
+			  					  {
+			  						  poweroff_flag = 0;
+			  						  Power_Bat();
+			  						  powerBat_flag = 1;
+			  					  }
+			  				  }
+			  }
+		  }
+	  }
 
 
 	  /*** If one of the Events have triggered the shutdown-timer,

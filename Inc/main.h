@@ -103,6 +103,8 @@ void PowerfailWarning(void);
 void PowerBack(void);
 void Alarm_Handler(void);
 void initialCheck(void);
+void Config_Reset_Pin_Input(void);
+void Config_Reset_Pin_Output(void);
 
 #define minWide 300
 #define minUSB  1800
@@ -110,6 +112,10 @@ void initialCheck(void);
 #define minBat 2550
 
 uint8_t poweroff_flag;
+uint8_t manual_poweroff_flag;
+
+uint8_t power_on_button_counter;
+
 uint8_t powerback_flag;
 uint8_t powerBat_flag;
 
@@ -124,6 +130,17 @@ uint8_t alarmWeekDay;
 uint8_t alarmTime;
 
 uint8_t alarmPoweroff;
+
+uint8_t alarmInterval;
+
+uint16_t alarmIntervalMinOn;
+
+uint16_t alarmIntervalMinOff;
+
+uint16_t alarmIntervalMinOn_Counter;
+
+uint16_t alarmIntervalMinOff_Counter;
+
 
 uint8_t alarm_enable;
 
@@ -177,6 +194,9 @@ uint8_t charging;
 #define warning_enable_FlashAdress 0x8007CF0
 #define serialLessMode_FlashAdress 0x8007D00
 #define batLevel_shutdown_FlashAdress 0x8007D10
+#define alarmInterval_FlashAdress 0x8007D20
+#define alarmIntervalMinOn_FlashAdress 0x8007D30
+#define alarmIntervalMinOff_FlashAdress 0x8007D40
 
 void flashConfig(void);
 void flashValue(uint32_t address, uint32_t data);
