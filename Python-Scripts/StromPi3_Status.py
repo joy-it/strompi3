@@ -83,7 +83,7 @@ serial_port.open()
 
 try:
     serial_port.write('status-rpi')
-    sleep(0.1)
+    sleep(1)
     serial_port.write('\x0D')
     sp3_time = serial_port.readline(9999);
     sp3_date = serial_port.readline(9999);
@@ -103,6 +103,9 @@ try:
     sp3_shutdown_time = serial_port.readline(9999);
     sp3_warning_enable = serial_port.readline(9999);
     sp3_serialLessMode = serial_port.readline(9999);
+    sp3_intervalAlarm = serial_port.readline(9999);
+    sp3_intervalAlarmOnTime = serial_port.readline(9999);
+    sp3_intervalAlarmOffTime = serial_port.readline(9999);
     sp3_batLevel_shutdown = serial_port.readline(9999);
     sp3_batLevel = serial_port.readline(9999);
     sp3_charging = serial_port.readline(9999);
@@ -164,6 +167,10 @@ try:
     print 'Powerfail Warning: ' + enabled_disabled_converter(int(sp3_warning_enable))
     print ' '
     print 'Serial-Less Mode: ' + enabled_disabled_converter(int(sp3_serialLessMode))
+    print ' '
+    print 'Interval-Alarm: ' + enabled_disabled_converter(int(sp3_intervalAlarm))
+    print ' Interval-On-Time: ' + sp3_intervalAlarmOnTime.rstrip('\n').zfill(2) + ' minutes'
+    print ' Interval-Off-Time: ' + sp3_intervalAlarmOffTime.rstrip('\n').zfill(2) + ' minutes'
     print ' '
     print 'Battery-Level Shutdown: ' + batterylevel_shutdown_converter(int(sp3_batLevel_shutdown))
     print ' '
