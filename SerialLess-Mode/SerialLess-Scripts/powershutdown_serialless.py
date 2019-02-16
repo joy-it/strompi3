@@ -18,22 +18,15 @@ Previous_State = 1
 try:
     print "Waiting for Initialization"
     while GPIO.input(GPIO_TPIN)==0:
-     Current_State  = 1
      time.sleep(1)
 
     time.sleep(1)
 
     print "Ready"
 
-    while True :
-     Current_State = GPIO.input(GPIO_TPIN)
-     if Current_State==0 and Previous_State==1:
-      Previous_State=0
-      print "Raspberry Pi Shutdown!"
-      os.system("sudo shutdown -h now")
-     elif Current_State==1 and Previous_State==0:
-      Previous_State=1
-      time.sleep(0.01)
+    GPIO.wait_for_edge(GPIO_TPIN, GPIO.FALLING)
+    print "Raspberry Pi Shutdown!"
+    os.system("sudo shutdown -h now")
 
 except KeyboardInterrupt:
     print "Quit"
