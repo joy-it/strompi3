@@ -69,25 +69,13 @@ static portBASE_TYPE prvStartStromPiConsole( int8_t *pcWriteBuffer, size_t xWrit
 static portBASE_TYPE prvStartStromPiConsoleQuick( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvQuitStromPiConsole( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvSetDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmWeekday( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmPowerOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmPowerOffEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmIntervalEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmIntervalOnTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvAlarmIntervalOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvShutdownEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvSerialLessMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvWarning( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvSetConfig( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvShowStatus( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+static portBASE_TYPE prvShowAlarm( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvPowerOff( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvTimeRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvDateRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
-static portBASE_TYPE prvBatLevelShutdown( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
 /*** Here you can find  how FreeRTOS needs the command registered
  *
@@ -116,12 +104,12 @@ static const CLI_Command_Definition_t xSetDate =
 	4
 };
 
-static const CLI_Command_Definition_t xSetTimer =
+static const CLI_Command_Definition_t xSetConfig =
 {
-	( const int8_t * const ) "set-timer",
-	( const int8_t * const ) "set-timer <shutdown-seconds>:\r\n Sets the Shutdown Timer to <shutdown-seconds>\r\n\r\n",
-	prvSetTimer,
-	1
+	( const int8_t * const ) "set-config",
+	( const int8_t * const ) "",
+	prvSetConfig,
+	2
 };
 
 static const CLI_Command_Definition_t xStartStromPiConsole =
@@ -151,6 +139,15 @@ static const CLI_Command_Definition_t xQuitStromPiConsole =
 	//startstrompiconsole:\r\n Terminal-Console wird auf dem StromPi gestartet\r\n\r\n
 };
 
+static const CLI_Command_Definition_t xMode =
+{
+	( const int8_t * const ) "strompi-mode",
+	( const int8_t * const ) "strompi-mode <mode-number>:\r\n Configures the mode of the StromPi 3:\r\n  Mode 1: mUSB -> Wide\r\n  Mode 2: Wide -> mUSB\r\n  Mode 3: mUSB -> Battery\r\n  Mode 4: Wide -> Battery\r\n  Mode 5: mUSB -> Wide -> Battery\r\n  Mode 6: Wide -> mUSB -> Battery\r\n\r\n",
+	prvMode,
+	1
+};
+
+
 static const CLI_Command_Definition_t xADCOutput =
 {
 	( const int8_t * const ) "adc-output",
@@ -159,13 +156,6 @@ static const CLI_Command_Definition_t xADCOutput =
 	0
 };
 
-static const CLI_Command_Definition_t xMode =
-{
-	( const int8_t * const ) "strompi-mode",
-	( const int8_t * const ) "strompi-mode <mode-number>:\r\n Configures the mode of the StromPi 3:\r\n  Mode 1: mUSB -> Wide\r\n  Mode 2: Wide -> mUSB\r\n  Mode 3: mUSB -> Battery\r\n  Mode 4: Wide -> Battery\r\n\r\n",
-	prvMode,
-	1
-};
 
 static const CLI_Command_Definition_t xTimeOutput =
 {
@@ -175,108 +165,20 @@ static const CLI_Command_Definition_t xTimeOutput =
 	0
 };
 
-static const CLI_Command_Definition_t xAlarmMode =
-{
-	( const int8_t * const ) "alarm-mode",
-	( const int8_t * const ) "alarm-mode <mode-number>:\r\n Set the Wakeup-Alarm to one of the following modes:\r\n  Mode 1: Time-Alarm\r\n  Mode 2: Date-Alarm\r\n  Mode 3: Weekday-Alarm\r\n\r\n",
-	prvAlarmMode,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmEnable =
-{
-	( const int8_t * const ) "alarm-enable",
-	( const int8_t * const ) "alarm-enable <option>:\r\n The configured Alarm-Mode will be enabled <1> or disabled <0>. \r\n\r\n",
-	prvAlarmEnable,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmTime =
-{
-	( const int8_t * const ) "alarm-set-time",
-	( const int8_t * const ) "alarm-set-time <hour> <minutes>:\r\n Sets the time of the Wakeup-Alarm\r\n\r\n",
-	prvAlarmTime,
-	2
-};
-
-static const CLI_Command_Definition_t xAlarmWeekday =
-{
-	( const int8_t * const ) "alarm-set-weekday",
-	( const int8_t * const ) "alarm-set-weekday <weekday>:\r\n Configures the weekday of the Wakeup-Alarm (Monday...Sunday -> 1...7)\r\n\r\n",
-	prvAlarmWeekday,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmDate =
-{
-	( const int8_t * const ) "alarm-set-date",
-	( const int8_t * const ) "alarm-set-date <date> <month>:\r\n Sets the date of the Wakeup-Alarm\r\n\r\n",
-	prvAlarmDate,
-	2
-};
-
-static const CLI_Command_Definition_t xAlarmPowerOffTime =
-{
-	( const int8_t * const ) "poweroff-set-time",
-	( const int8_t * const ) "poweroff-set-time <hour> <minutes>:\r\n Sets the time of the PowerOff-Alarm\r\n\r\n",
-	prvAlarmPowerOffTime,
-	2
-};
-
-static const CLI_Command_Definition_t xAlarmPowerOffEnable =
-{
-	( const int8_t * const ) "poweroff-enable",
-	( const int8_t * const ) "poweroff-enable <option>:\r\n Enables <1> or disables <0> the PowerOff-Alarm\r\n\r\n",
-	prvAlarmPowerOffEnable,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmIntervalEnable =
-{
-	( const int8_t * const ) "interval-enable",
-	( const int8_t * const ) "interval-enable <option>:\r\n Enables <1> or disables <0> the PowerOff-Interval-Alarm\r\n\r\n",
-	prvAlarmIntervalEnable,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmIntervalOnTime =
-{
-	( const int8_t * const ) "interval-ontime",
-	( const int8_t * const ) "interval-ontime <min>:\r\n Defines the OnTime of the PowerOff-Interval-Alarm in Minutes\r\n\r\n",
-	prvAlarmIntervalOnTime,
-	1
-};
-
-static const CLI_Command_Definition_t xAlarmIntervalOffTime =
-{
-	( const int8_t * const ) "interval-offtime",
-	( const int8_t * const ) "interval-offtime <min>:\r\n Defines the OffTime of the PowerOff-Interval-Alarm in Minutes\r\n\r\n",
-	prvAlarmIntervalOffTime,
-	1
-};
-
-
-static const CLI_Command_Definition_t xWarning =
-{
-	( const int8_t * const ) "warning-enable",
-	( const int8_t * const ) "warning-enable <option>:\r\n Enables <1> or disables <0> the Warning through the serial interface, when the primary voltage input fails\r\n\r\n",
-	prvWarning,
-	1
-};
-
-static const CLI_Command_Definition_t xShutdownEnable =
-{
-	( const int8_t * const ) "shutdown-enable",
-	( const int8_t * const ) "shutdown-enable <option>:\r\n Enables <1> or disables <0> the Raspberry Pi Shutdown\r\n\r\n",
-	prvShutdownEnable,
-	1
-};
 
 static const CLI_Command_Definition_t xShowStatus =
 {
 	( const int8_t * const ) "show-status",
-	( const int8_t * const ) "show-status:\r\n Outputs the actual Configuration\r\n\r\n",
+	( const int8_t * const ) "show-status:\r\n Outputs the actual Global-Configuration\r\n\r\n",
 	prvShowStatus,
+	0
+};
+
+static const CLI_Command_Definition_t xShowAlarm =
+{
+	( const int8_t * const ) "show-alarm",
+	( const int8_t * const ) "show-alarm:\r\n Outputs the actual Alarm-Configuration\r\n\r\n",
+	prvShowAlarm,
 	0
 };
 
@@ -310,22 +212,6 @@ static const CLI_Command_Definition_t xStatusRPi =
 	( const int8_t * const ) "",
 	prvStatusRPi,
 	0
-};
-
-static const CLI_Command_Definition_t xSerialLessMode =
-{
-	( const int8_t * const ) "serialless-mode",
-	( const int8_t * const ) "serialless-mode:\r\n Enables <1> or disables <0> the Serial-Less Mode of the StromPi3\r\n\r\n",
-	prvSerialLessMode,
-	1
-};
-
-static const CLI_Command_Definition_t xBatLevelShutdown =
-{
-	( const int8_t * const ) "batlevel-shutdown",
-	( const int8_t * const ) "batlevel-shutdown <level-number>:\r\n Configures the StromPi 3 to shutdown the Raspberry Pi when the Battery Level\r\n falls below the configured Battery-Voltagelevel:\r\n  Mode 0: Disabled\r\n  Mode 1: Below 10%\r\n  Mode 2: Below 25%\r\n  Mode 3: Below 50%\r\n\r\n",
-	prvBatLevelShutdown,
-	1
 };
 
 int ascii2int(const char* s);

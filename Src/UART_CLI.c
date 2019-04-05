@@ -77,7 +77,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[6] = "v1.5";
+char firmwareVersion[6] = "v1.6";
 
 /* FreeRTOS+IO includes. */
 
@@ -136,28 +136,15 @@ void vUARTCommandConsoleStart( void )
 		FreeRTOS_CLIRegisterCommand( &xMode );
 		FreeRTOS_CLIRegisterCommand( &xSetClock );
 		FreeRTOS_CLIRegisterCommand( &xSetDate );
+		FreeRTOS_CLIRegisterCommand( &xSetConfig );
 		FreeRTOS_CLIRegisterCommand( &xStartStromPiConsole );
 		FreeRTOS_CLIRegisterCommand( &xStartStromPiConsoleQuick );
-		FreeRTOS_CLIRegisterCommand( &xSetTimer );
-		FreeRTOS_CLIRegisterCommand( &xShutdownEnable );
-		FreeRTOS_CLIRegisterCommand( &xWarning );
-		FreeRTOS_CLIRegisterCommand( &xAlarmMode );
-		FreeRTOS_CLIRegisterCommand( &xAlarmEnable );
-		FreeRTOS_CLIRegisterCommand( &xAlarmTime );
-		FreeRTOS_CLIRegisterCommand( &xAlarmWeekday );
-		FreeRTOS_CLIRegisterCommand( &xAlarmDate );
-		FreeRTOS_CLIRegisterCommand( &xAlarmPowerOffTime );
-		FreeRTOS_CLIRegisterCommand( &xAlarmPowerOffEnable );
 		FreeRTOS_CLIRegisterCommand( &xShowStatus );
+		FreeRTOS_CLIRegisterCommand( &xShowAlarm );
 		FreeRTOS_CLIRegisterCommand( &xPowerOff );
 		FreeRTOS_CLIRegisterCommand( &xTimeRPi );
 		FreeRTOS_CLIRegisterCommand( &xDateRPi );
 		FreeRTOS_CLIRegisterCommand( &xStatusRPi );
-		FreeRTOS_CLIRegisterCommand( &xSerialLessMode );
-		FreeRTOS_CLIRegisterCommand( &xBatLevelShutdown );
-		FreeRTOS_CLIRegisterCommand( &xAlarmIntervalEnable );
-		FreeRTOS_CLIRegisterCommand( &xAlarmIntervalOnTime );
-		FreeRTOS_CLIRegisterCommand( &xAlarmIntervalOffTime );
 		FreeRTOS_CLIRegisterCommand( &xQuitStromPiConsole );
 
 
@@ -670,19 +657,19 @@ static portBASE_TYPE prvSetDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 	pdFALSE. */
 	return pdFALSE;
 }
+
 /*-----------------------------------------------------------*/
 
-/*** prvSetTimer
+/*** prvSetConfig
  * This command sets the seconds for the Shutdown-Timer
  *
  * ***/
 
-static portBASE_TYPE prvSetTimer( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+static portBASE_TYPE prvSetConfig( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
+	const int8_t *const pcMessage = ( int8_t * ) "";
 
-	uint16_t timer_sec;
-
-	int16_t *pcParameter1;
+	int8_t *pcParameter1;
 	BaseType_t xParameter1StringLength;
 
 	pcParameter1 = FreeRTOS_CLIGetParameter
@@ -695,27 +682,57 @@ static portBASE_TYPE prvSetTimer( int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 	                      &xParameter1StringLength
 	                    );
 
+	int8_t *pcParameter2;
+	BaseType_t xParameter2StringLength;
+
+	pcParameter2 = FreeRTOS_CLIGetParameter
+	                    (
+	                      /* The command string itself. */
+	                      pcCommandString,
+	                      /* Return the first parameter. */
+	                      2,
+	                      /* Store the parameter string length. */
+	                      &xParameter2StringLength
+	                    );
+
+
+	pcParameter1[ xParameter1StringLength ] = 0x00;
+    pcParameter2[ xParameter2StringLength ] = 0x00;
+
 	( void ) pcCommandString;
 	configASSERT( pcWriteBuffer );
 
 	/* This function assumes the buffer length is adequate. */
 	( void ) xWriteBufferLen;
 
-    pcParameter1[ xParameter1StringLength ] = 0x00;
+	uint8_t commandParameter1;
+	uint32_t commandParameter2;
 
-    timer_sec = ascii2int(pcParameter1);
+	commandParameter1 = ascii2int(pcParameter1);
+	commandParameter2 = ascii2int(pcParameter2);
 
-    shutdown_time = timer_sec;
+	if (commandParameter1 == 0 && commandParameter2 == 0)
+	{
+		updateConfig();
+	}
+	else if (commandParameter1 == 0 && commandParameter2 == 1)
+	{
+		updateConfig();
+		reconfigureWatchdog();
+	}
+	else if (commandParameter1 >=1 && commandParameter1 <= configMax )
+	{
+		configParamters[commandParameter1] = commandParameter2;
+	}
 
-    flashConfig();
-
-	sprintf(( char * ) pcWriteBuffer,"The Shutdown-Timer has been set to %02d seconds", timer_sec);
-
+	strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMessage );
 
 	/* There is no more data to return after this single string, so return
 	pdFALSE. */
 	return pdFALSE;
 }
+
+
 /*-----------------------------------------------------------*/
 
 /*** prvStartStromPiConsole
@@ -945,7 +962,21 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", sdatestructureget.WeekDay);
 
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", modus);
+	if (threeStageMode > 0)
+		{
+		uint8_t modetemp;
+
+			switch(threeStageMode)
+			{
+				case 1:	modetemp = 5;sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", modetemp);break;
+				case 2: modetemp = 6;sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", modetemp);break;
+			}
+		}
+
+	else
+		{
+			sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", modus);
+		}
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", alarm_enable);
 
@@ -995,6 +1026,10 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", charging);
 
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", powerOnButton_enable);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", powerOnButton_time);
+
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[0]);
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[1]);
@@ -1003,6 +1038,10 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", measuredValue[3]);
 
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", output_status);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "%lu\n", powerfailure_counter);
+
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion);
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\n");
@@ -1010,866 +1049,6 @@ static portBASE_TYPE prvStatusRPi( int8_t *pcWriteBuffer, size_t xWriteBufferLen
 	return pdFALSE;
 
 
-}
-
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmMode
- * This command changes the Alarmmode of the StromPi3 Scheduling System.
- * When the StromPi 3 have shutted down the Raspberry Pi and changed to its PowerOff-state
- * it s possible to wake the system up through one of the following Alarms
- *
- * - alarmTime: this alarm triggers every time the preprogrammed clock time have been reached
- * - alarmWeekDay: this alarm triggers every time the preprogrammed weekday have been reached (for example every monday)
- * - alarmDate: this alarm triggers every time the preprogrammed date have been reached (for example every first march of the year)
- *
- * ***/
-
-static portBASE_TYPE prvAlarmMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t alarm_modus;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    alarm_modus = ascii2int(pcParameter1);
-
-    switch (alarm_modus)
-    {
-    	case 1:
-					alarmTime = 1;
-					alarmDate = 0;
-					alarmWeekDay = 0;
-
-					flashConfig();
-					sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been set to ""Time-Alarm""");
-					break;
-
-    	case 2:
-    	    		alarmTime = 0;
-    	    		alarmDate = 1;
-    	    		alarmWeekDay = 0;
-
-    	    		flashConfig();
-    	    		sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been set to ""Date-Alarm""");
-    	    		break;
-
-    	case 3:
-    	    		alarmTime = 0;
-    	    		alarmDate = 0;
-    	    		alarmWeekDay = 1;
-
-    	    		flashConfig();
-    	    		sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been set to ""Weekday-Alarm""");
-    	    		break;
-
-    }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmEnable
- * This command enables or disables the StromPi3 Wakeup Scheduling System
- *
- * ***/
-
-static portBASE_TYPE prvAlarmEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t alarm_enable_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    alarm_enable_temp = ascii2int(pcParameter1);
-
-    alarm_enable = alarm_enable_temp;
-
-    flashConfig();
-
-    switch (alarm_enable)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been disabled");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmTime
- * This command sets the Time for the StromPi3 Wakeup Scheduling System
- *
- * ***/
-
-static portBASE_TYPE prvAlarmTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t hour;
-	uint8_t min;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-	int8_t *pcParameter2;
-	BaseType_t xParameter2StringLength;
-
-	pcParameter2 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      2,
-	                      /* Store the parameter string length. */
-	                      &xParameter2StringLength
-	                    );
-
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-    pcParameter2[ xParameter2StringLength ] = 0x00;
-
-	hour = ascii2int(pcParameter1);
-	min = ascii2int(pcParameter2);
-
-	alarm_hour = hour;
-	alarm_min = min;
-
-	flashConfig();
-
-
-
-	sprintf(( char * ) pcWriteBuffer,"The WakeUp-Alarm has been set to %02d:%02d", hour , min);
-
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmWeekday
- * This command sets the WeekDay for the StromPi3 Wakeup Scheduling System
- *
- *  1 -> Monday
- *  2 -> Tuesday
- *  3 -> Wednesday
- *  4 -> Thursday
- *  5 -> Friday
- *  6 -> Saturday
- *  7 -> Sunday
- *
- * ***/
-
-
-static portBASE_TYPE prvAlarmWeekday( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t weekday;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-	weekday = ascii2int(pcParameter1);
-
-	alarm_weekday = weekday;
-
-	flashConfig();
-
-	char weekday_message[20];
-
-	switch(weekday)
-	{
-		case 1: strcpy(weekday_message, "Monday"); break;
-		case 2: strcpy(weekday_message, "Tuesday"); break;
-		case 3: strcpy(weekday_message, "Wednesday"); break;
-		case 4: strcpy(weekday_message, "Thursday"); break;
-		case 5: strcpy(weekday_message, "Friday"); break;
-		case 6: strcpy(weekday_message, "Saturday"); break;
-		case 7: strcpy(weekday_message, "Sunday"); break;
-	}
-
-	sprintf(( char * ) pcWriteBuffer,"The Weekday-Alarm has been set to %s", weekday_message);
-
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmDate
- * This command sets the Date for the StromPi3 Wakeup Scheduling System
- *
- * ***/
-
-static portBASE_TYPE prvAlarmDate( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t day;
-	uint8_t month;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-	int8_t *pcParameter2;
-	BaseType_t xParameter2StringLength;
-
-	pcParameter2 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      2,
-	                      /* Store the parameter string length. */
-	                      &xParameter2StringLength
-	                    );
-
-
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-    pcParameter2[ xParameter2StringLength ] = 0x00;
-
-
-	day = ascii2int(pcParameter1);
-	month = ascii2int(pcParameter2);
-
-	alarm_day = day;
-	alarm_month = month;
-
-	flashConfig();
-
-	sprintf(( char * ) pcWriteBuffer,"The date of the Date-Alarm has been set to %02d.%02d", alarm_day, alarm_month);
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmPowerOffTime
- * This command sets the Time for the StromPi3 Shutdown Scheduling System.
- *
- * With this it is possible to shutdown the Raspberry Pi to a preconfigured time and
- * put the StromPi 3 into its Shutdown-state
- *
- * ***/
-
-static portBASE_TYPE prvAlarmPowerOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t hour;
-	uint8_t min;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-	int8_t *pcParameter2;
-	BaseType_t xParameter2StringLength;
-
-	pcParameter2 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      2,
-	                      /* Store the parameter string length. */
-	                      &xParameter2StringLength
-	                    );
-
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-    pcParameter2[ xParameter2StringLength ] = 0x00;
-
-	hour = ascii2int(pcParameter1);
-	min = ascii2int(pcParameter2);
-
-	alarm_hour_off = hour;
-	alarm_min_off = min;
-
-	flashConfig();
-
-	sprintf(( char * ) pcWriteBuffer,"The time of the Time-Alarm has been set to %02d:%02d",alarm_hour_off, alarm_min_off);
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmIntervalEnable
- *
- *
- * ***/
-
-
-static portBASE_TYPE prvAlarmIntervalEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t powerAlarmInterval_enable_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    powerAlarmInterval_enable_temp = ascii2int(pcParameter1);
-
-    alarmInterval = powerAlarmInterval_enable_temp;
-
-    flashConfig();
-
-    switch (alarmInterval)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The Interval-Alarm has been disabled");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The Interval-Alarm has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmIntervalOnTime
- *
- *
- * ***/
-
-static portBASE_TYPE prvAlarmIntervalOnTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t IntervalOnTime;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    IntervalOnTime = ascii2int(pcParameter1);
-
-    alarmIntervalMinOn = IntervalOnTime;
-
-    flashConfig();
-
-	sprintf(( char * ) pcWriteBuffer,"The Interval-On-Time has been set to %d minutes", IntervalOnTime);
-
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmIntervalOffTime
- *
- *
- * ***/
-
-static portBASE_TYPE prvAlarmIntervalOffTime( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t IntervalOffTime;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    IntervalOffTime = ascii2int(pcParameter1);
-
-    alarmIntervalMinOff = IntervalOffTime;
-
-    flashConfig();
-
-	sprintf(( char * ) pcWriteBuffer,"The Interval-Off-Time has been set to %d minutes", IntervalOffTime);
-
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvAlarmPowerOffEnable
- * This command enable or disables the StromPi3 Shutdown Scheduling System.
- *
- * With this it is possible to shutdown the Raspberry Pi to a preconfigured time and
- * put the StromPi 3 into its Shutdown-state
- *
- * ***/
-
-
-
-
-
-static portBASE_TYPE prvAlarmPowerOffEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t poweroff_enable_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    poweroff_enable_temp = ascii2int(pcParameter1);
-
-    alarmPoweroff = poweroff_enable_temp;
-
-    flashConfig();
-
-    switch (alarmPoweroff)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The PowerOff-Alarm has been disabled");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The PowerOff-Alarm has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-
-
-/*-----------------------------------------------------------*/
-
-/*** prvWarning
- * This command enable or disables the powerfail Warning, if the primary voltage source have failed
- *
- * ***/
-
-static portBASE_TYPE prvWarning( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t warning_enable_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    warning_enable_temp = ascii2int(pcParameter1);
-
-    warning_enable = warning_enable_temp;
-
-    flashConfig();
-
-    switch (warning_enable)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The Powerfail Warning has been deactivated");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The Powerfail Warning has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-
-/*-----------------------------------------------------------*/
-
-/*** prvShutdownEnable
- * This command enable or disables the shutdown-timer.
- * It is one of the main functions of the StromPi 3: In the case of a powerfailure at the configured primary voltage source
- * the StromPi3 sends a warning to the Raspberry Pi, so it can safely shutdown its OS; after that the StromPi3
- * starts its shutdown-timer and cut off the RPi from the backup source.
- *
- * ***/
-
-static portBASE_TYPE prvShutdownEnable( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t shutdown_enable_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    shutdown_enable_temp = ascii2int(pcParameter1);
-
-    shutdown_enable = shutdown_enable_temp;
-
-    flashConfig();
-
-    switch (shutdown_enable)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The Raspberry-Pi Shutdown has been deactivated");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The Raspberry-Pi Shutdown has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvBatLevelShutdown
- *  This command configures the Batterylevel-Shutdown function.
- *  The Battery-Voltage is measured and then mapped on 4 available voltage levels (1:10%, 2:25%, 3:50%, 4:100%)
- *  at the end of the main-Task. In the case the Batterylevel-Shutdown is configured,
- *  the StromPi3 give a shutdown-signal to the Raspberry Pi and cuts of the PowerPath in a fixed 10 seconds timer,
- *  when the Battery has been discharged to the configured level. *
- *
- * ***/
-
-static portBASE_TYPE prvBatLevelShutdown( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t batLevel_shutdown_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    batLevel_shutdown_temp = ascii2int(pcParameter1);
-
-    batLevel_shutdown = batLevel_shutdown_temp;
-
-    flashConfig();
-
-    switch (batLevel_shutdown)
-        {
-
-			case 0:
-						sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been disabled");
-						break;
-        	case 1:
-    					sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 10%%");
-    					break;
-        	case 2:
-        	    		sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 25%%");
-        	    		break;
-        	case 3:
-    					sprintf(( char * ) pcWriteBuffer,"The Battery-Level Shutdown has been configured to 50%%");
-    					break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
-}
-
-/*-----------------------------------------------------------*/
-
-/*** prvSerialLessMode
- *
- * If the Serial-Interface is blocked by another HAT or an other module,
- * it is possible to use the StromPi3 in a Serial-Less Mode.
- * In this case the Shutdown-Signal is not sent out through the serial Interface as a message,
- * but is indicated through a connected GPIO-LINE (Like in the previous versions of the StromPi family)
- * As for this needed extra connection, please refer to the manuals located in the "SerialLess" Folder
- *
- * ***/
-
-static portBASE_TYPE prvSerialLessMode( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
-{
-
-	uint8_t serialLessMode_temp;
-
-	int8_t *pcParameter1;
-	BaseType_t xParameter1StringLength;
-
-	pcParameter1 = FreeRTOS_CLIGetParameter
-	                    (
-	                      /* The command string itself. */
-	                      pcCommandString,
-	                      /* Return the first parameter. */
-	                      1,
-	                      /* Store the parameter string length. */
-	                      &xParameter1StringLength
-	                    );
-
-	( void ) pcCommandString;
-	configASSERT( pcWriteBuffer );
-
-	/* This function assumes the buffer length is adequate. */
-	( void ) xWriteBufferLen;
-
-    pcParameter1[ xParameter1StringLength ] = 0x00;
-
-    serialLessMode_temp = ascii2int(pcParameter1);
-
-    serialLessMode = serialLessMode_temp;
-
-    flashConfig();
-
-    switch (serialLessMode_temp)
-        {
-        	case 0:
-    					sprintf(( char * ) pcWriteBuffer,"The StromPi3 Serial-Less Mode has been deactivated");
-    					break;
-
-        	case 1:
-        	    		sprintf(( char * ) pcWriteBuffer,"The StromPi3 Serial-Less Mode has been enabled");
-        	    		break;
-
-        }
-
-	/* There is no more data to return after this single string, so return
-	pdFALSE. */
-	return pdFALSE;
 }
 
 
@@ -1912,15 +1091,140 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Date: %s %02d.%02d.20%02d\r\n", temp_message, sdatestructureget.Date, sdatestructureget.Month, sdatestructureget.Year);
 
-	switch(modus)
-	{
-	case 1:	strcpy(temp_message, "mUSB -> Wide"); break;
-	case 2: strcpy(temp_message, "Wide -> mUSB"); break;
-	case 3:	strcpy(temp_message, "mUSB -> Battery"); break;
-	case 4: strcpy(temp_message,"Wide -> Battery"); break;
-	}
+	switch(output_status)
+		{
+		case 0:	strcpy(temp_message, "Power-Off"); break; //For Debuging
+		case 1: strcpy(temp_message, "mUSB"); break;
+		case 2:	strcpy(temp_message, "Wide"); break;
+		case 3: strcpy(temp_message,"Battery"); break;
+		}
+		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n StromPi-Output:  %s \r\n", temp_message);
+
+
+	if (threeStageMode > 0)
+		{
+			switch(threeStageMode)
+			{
+				case 1:	strcpy(temp_message, "mUSB -> Wide -> Battery"); break;
+				case 2: strcpy(temp_message, "Wide -> mUSB -> Battery"); break;
+			}
+		}
+
+	else
+		{
+		switch(modus)
+			{
+				case 1:	strcpy(temp_message, "mUSB -> Wide"); break;
+				case 2: strcpy(temp_message, "Wide -> mUSB"); break;
+				case 3:	strcpy(temp_message, "mUSB -> Battery"); break;
+				case 4: strcpy(temp_message,"Wide -> Battery"); break;
+				case 5:	strcpy(temp_message, "mUSB -> Wide -> Battery"); break;
+				case 6: strcpy(temp_message,"Wide -> mUSB -> Battery"); break;
+			}
+		}
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n StromPi-Mode: %s \r\n", temp_message);
 
+	switch(shutdown_enable)
+			{
+			case 0:	strcpy(temp_message, "Disabled"); break;
+			case 1: strcpy(temp_message, "Enabled"); break;
+			}
+
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Raspberry Pi Shutdown: %s ", temp_message);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Shutdown-Timer: %d seconds", shutdown_time);
+
+	switch(warning_enable)
+				{
+				case 0:	strcpy(temp_message, "Disabled"); break;
+				case 1: strcpy(temp_message, "Enabled"); break;
+				}
+		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Powerfail Warning: %s ", temp_message);
+
+	switch(serialLessMode)
+					{
+					case 0:	strcpy(temp_message, "Disabled"); break;
+					case 1: strcpy(temp_message, "Enabled"); break;
+					}
+			sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Serial-Less Mode: %s ", temp_message);
+
+	switch(batLevel_shutdown)
+						{
+							case 0:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: Disabled");
+										break;
+							case 1:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 10%%");
+										break;
+							case 2:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 25%%");
+										break;
+							case 3:
+								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 50%%");
+										break;
+						}
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Powerfailure-Counter: %d", powerfailure_counter);
+
+	switch(powerOnButton_enable)
+			{
+			case 0:	strcpy(temp_message, "Disabled"); break;
+			case 1: strcpy(temp_message, "Enabled"); break;
+			}
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n PowerOn-Button: %s ", temp_message);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  PowerOn-Button-Timer: %d seconds", powerOnButton_time);
+
+
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n FirmwareVersion: ", temp_message);
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion, temp_message);
+
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+
+/*** prvShowAlarm
+ * This command is similar to the Show-Status Command but shows only the configuration of the configured Alarms
+ *
+ * ***/
+
+static portBASE_TYPE prvShowAlarm ( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	( void ) pcCommandString;
+	configASSERT( pcWriteBuffer );
+
+	/* This function assumes the buffer length is adequate. */
+	( void ) xWriteBufferLen;
+
+	RTC_TimeTypeDef stimestructureget;
+	RTC_DateTypeDef sdatestructureget;
+
+	HAL_RTC_GetTime(&hrtc, &stimestructureget, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
+
+	sprintf(( char * ) pcWriteBuffer, "\r\n Time: %02d:%02d:%02d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
+
+	char temp_message[20];
+
+	switch (sdatestructureget.WeekDay)
+		{
+			case 1: strcpy(temp_message, "Monday"); break;
+			case 2: strcpy(temp_message, "Tuesday"); break;
+			case 3: strcpy(temp_message, "Wednesday"); break;
+			case 4: strcpy(temp_message, "Thursday"); break;
+			case 5: strcpy(temp_message, "Friday"); break;
+			case 6: strcpy(temp_message, "Saturday"); break;
+			case 7: strcpy(temp_message, "Sunday"); break;
+		}
+
+	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Date: %s %02d.%02d.20%02d\r\n", temp_message, sdatestructureget.Date, sdatestructureget.Month, sdatestructureget.Year);
 
 	switch(alarm_enable)
 	{
@@ -1965,7 +1269,7 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  PowerOff-Alarm-Time: %02d:%02d\r\n", alarm_hour_off, alarm_min_off);
 
-	switch(shutdown_enable)
+	switch(alarmInterval)
 			{
 			case 0:	strcpy(temp_message, "Disabled"); break;
 			case 1: strcpy(temp_message, "Enabled"); break;
@@ -1976,51 +1280,6 @@ static portBASE_TYPE prvShowStatus ( int8_t *pcWriteBuffer, size_t xWriteBufferL
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Interval-Alarm-OnTime: %d minutes\r", alarmIntervalMinOn);
 
 	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Interval-Alarm-OffTime: %d minutes\r\n", alarmIntervalMinOff);
-
-	switch(shutdown_enable)
-			{
-			case 0:	strcpy(temp_message, "Disabled"); break;
-			case 1: strcpy(temp_message, "Enabled"); break;
-			}
-
-
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n Raspberry Pi Shutdown: %s ", temp_message);
-
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n  Shutdown-Timer: %d seconds", shutdown_time);
-
-	switch(warning_enable)
-				{
-				case 0:	strcpy(temp_message, "Disabled"); break;
-				case 1: strcpy(temp_message, "Enabled"); break;
-				}
-		sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Powerfail Warning: %s ", temp_message);
-
-	switch(serialLessMode)
-					{
-					case 0:	strcpy(temp_message, "Disabled"); break;
-					case 1: strcpy(temp_message, "Enabled"); break;
-					}
-			sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Serial-Less Mode: %s ", temp_message);
-
-	switch(batLevel_shutdown)
-						{
-							case 0:
-								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: Disabled");
-										break;
-							case 1:
-								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 10%%");
-										break;
-							case 2:
-								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 25%%");
-										break;
-							case 3:
-								sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n Battery-Level Shutdown: 50%%");
-										break;
-						}
-
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), "\r\n\r\n FirmwareVersion: ", temp_message);
-
-	sprintf(( char * ) pcWriteBuffer + strlen(( char * ) pcWriteBuffer), firmwareVersion, temp_message);
 
 	/* There is no more data to return after this single string, so return
 	pdFALSE. */

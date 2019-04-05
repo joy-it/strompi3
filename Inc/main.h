@@ -141,7 +141,6 @@ uint16_t alarmIntervalMinOn_Counter;
 
 uint16_t alarmIntervalMinOff_Counter;
 
-
 uint8_t alarm_enable;
 
 uint8_t alarm_min;
@@ -172,7 +171,25 @@ uint8_t batLevel;
 uint8_t batLevel_shutdown;
 uint8_t batLevel_shutdown_flag;
 
+uint8_t output_status;
+
+uint16_t powerfailure_counter;
+uint8_t powerfailure_counter_block;
+
+uint8_t powerOnButton_enable;
+uint16_t powerOnButton_time;
+
 uint8_t charging;
+
+uint8_t threeStageMode;
+
+uint8_t watchdog_update;
+
+void reconfigureWatchdog();
+
+#define configMax 24
+
+uint32_t configParamters[configMax];
 
 #define chargingOffset 90
 
@@ -197,9 +214,14 @@ uint8_t charging;
 #define alarmInterval_FlashAdress 0x8007D20
 #define alarmIntervalMinOn_FlashAdress 0x8007D30
 #define alarmIntervalMinOff_FlashAdress 0x8007D40
+#define powerOnButton_enable_FlashAdress 0x8007D50
+#define powerOnButton_time_FlashAdress 0x8007D60
+
 
 void flashConfig(void);
 void flashValue(uint32_t address, uint32_t data);
+
+void updateConfig(void);
 
 /* USER CODE END Private defines */
 

@@ -217,9 +217,37 @@ int main(void)
   alarmInterval = *(uint8_t *)alarmInterval_FlashAdress;
   alarmIntervalMinOn = *(uint16_t *)alarmIntervalMinOn_FlashAdress;
   alarmIntervalMinOff = *(uint16_t *)alarmIntervalMinOff_FlashAdress;
+  powerOnButton_enable = *(uint16_t *)powerOnButton_enable_FlashAdress;
+  powerOnButton_time = *(uint16_t *)powerOnButton_time_FlashAdress;
+
+  configParamters[1] = modus;
+  configParamters[2] = alarmDate;
+  configParamters[3] = alarmWeekDay;
+  configParamters[4] = alarmTime;
+  configParamters[5] = alarmPoweroff;
+  configParamters[6] = alarm_min;
+  configParamters[7] = alarm_hour;
+  configParamters[8] = alarm_min_off;
+  configParamters[9] = alarm_hour_off;
+  configParamters[10] = alarm_day;
+  configParamters[11] = alarm_month;
+  configParamters[12] = alarm_weekday;
+  configParamters[13] = alarm_enable;
+  configParamters[14] = shutdown_enable;
+  configParamters[15] = shutdown_time;
+  configParamters[16] = warning_enable;
+  configParamters[17] = serialLessMode;
+  configParamters[18] = batLevel_shutdown;
+  configParamters[19] = alarmInterval;
+  configParamters[20] = alarmIntervalMinOn;
+  configParamters[21] = alarmIntervalMinOff;
+  configParamters[22] = powerOnButton_enable;
+  configParamters[23] = powerOnButton_time;
 
   alarmIntervalMinOn_Counter = alarmIntervalMinOn;
   alarmIntervalMinOff_Counter = alarmIntervalMinOff;
+
+
 
   poweroff_flag = 0;
 
@@ -292,8 +320,12 @@ int main(void)
    *  3: mUSB (primary) -> Battery (secondary)
    *  4: Wide (primary) -> Battery (secondary)
    *
+   *  5: Three-Stage-Mode: mUSB -> Wide -> Battery
+   *  6: Three-Stage-Mode: Wide -> mUSB -> Battery
+   *
    *  So for the initial boot process the primary source is selected
    */
+
 
   if (modus == 1 || modus == 3)
   {
@@ -301,6 +333,18 @@ int main(void)
   }
   else if (modus == 2 || modus == 4)
   {
+	  Power_Wide();
+  }
+  else if (modus == 5)
+  {
+	  threeStageMode = 1;
+	  modus = 1;
+	  Power_USB();
+  }
+  else if (modus == 6)
+  {
+	  threeStageMode = 2;
+	  modus = 2;
 	  Power_Wide();
   }
 
@@ -650,31 +694,33 @@ void Config_Reset_Pin_Output(void)
 /*
  * Functions to change the PowerPath
  *
- *
+ *		- Power_USB() activates the PowerPath of the mUSB Input
  * 		- Power_Wide() activates the PowerPath of the WideRange StepDownConverter
- * 		- Power_USB() activates the PowerPath of the mUSB Input
  * 		- Power_Bat() deactivates the charging circuit and activates the PowerPath of the Battery
  * 		- Power_Off() deactivates all Powerpathes so the Raspberry Pi turns off completely
  */
 
-void Power_Wide(void)
-{
-	charging = 1;
-	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_RESET);
-}
-
 void Power_USB(void)
 {
+	output_status = 1;
 	charging = 1;
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
 }
 
+void Power_Wide(void)
+{
+	output_status = 2;
+	charging = 1;
+	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port,CTRL_VUSB_Pin,GPIO_PIN_RESET);
+}
+
 void Power_Bat(void)
 {
+	output_status = 3;
 	charging = 0;
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
@@ -683,6 +729,7 @@ void Power_Bat(void)
 
 void Power_Off(void)
 {
+	output_status = 0;
 	charging = 0;
 	HAL_GPIO_WritePin(CTRL_VREG5_GPIO_Port,CTRL_VREG5_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port,BOOST_EN_Pin,GPIO_PIN_SET);
@@ -707,8 +754,6 @@ void ShutdownRPi(void)
 	{
 		Config_Reset_Pin_Output();
 		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_RESET);
-		osDelay(100);
-		HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_SET);
 	}
 	else
 	{
@@ -735,7 +780,34 @@ void PowerfailWarning(void)
  *
  * 		- configureAWD_USB() is used when mUSB (mode 1 or 3) is configured as the primary input
  * 		- configureAWD_Wide() is used when Wide (mode 2 or 4) is configured as the primary input
+ *
+ *
  * 																							  ***/
+
+void reconfigureWatchdog()
+{
+
+	if (HAL_ADC_Stop_DMA(&hadc) != HAL_OK)
+			{
+			  return 0;
+			}
+
+	  if (modus == 1 || modus == 3)
+	  {
+		  configureAWD_USB();
+	  }
+	  else if (modus == 2 || modus == 4)
+	  {
+		  configureAWD_Wide();
+	  }
+
+	  HAL_ADCEx_Calibration_Start(&hadc);
+
+	  if (HAL_ADC_Start_DMA(&hadc, (uint32_t*)rawValue, 5) != HAL_OK)
+		{
+		  return 0;
+		}
+}
 
 void configureAWD_USB(void)
 {
@@ -843,6 +915,17 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 		shutdown_flag = 1;
 	}
 
+	/***  When a power failure of the primary source occurs, this counter is increased, so it can be tracked through the show-status command
+	 *
+	 ***/
+
+	if (powerfailure_counter_block != 1)
+	{
+			powerfailure_counter++;
+			powerfailure_counter_block = 1;
+	}
+
+
 	/*** This line deactivates the ADC Watchdog
 	 * Its main purpose is to make sure to register a powerfailure probably once
 	 * and that the ADC Watchdog Callback wouldn't be retriggered before the powerfailure
@@ -910,11 +993,44 @@ void flashConfig(void)
 	  flashValue(alarmInterval_FlashAdress,alarmInterval);
 	  flashValue(alarmIntervalMinOn_FlashAdress,alarmIntervalMinOn);
 	  flashValue(alarmIntervalMinOff_FlashAdress,alarmIntervalMinOff);
+	  flashValue(powerOnButton_enable_FlashAdress,powerOnButton_enable);
+	  flashValue(powerOnButton_time_FlashAdress,powerOnButton_time);
 
 
 	HAL_FLASH_Lock();
 
 }
+
+void updateConfig(void)
+{
+	modus = configParamters[1];
+	alarmDate = configParamters[2];
+	alarmWeekDay = configParamters[3];
+	alarmTime = configParamters[4];
+	alarmPoweroff = configParamters[5];
+	alarm_min = configParamters[6];
+	alarm_hour = configParamters[7];
+	alarm_min_off = configParamters[8];
+	alarm_hour_off = configParamters[9];
+	alarm_day = configParamters[10];
+	alarm_month = configParamters[11];
+	alarm_weekday = configParamters[12];
+	alarm_enable = configParamters[13];
+	shutdown_enable = configParamters[14];
+	shutdown_time = configParamters[15];
+	warning_enable = configParamters[16];
+	serialLessMode = configParamters[17];
+	batLevel_shutdown = configParamters[18];
+	alarmInterval = configParamters[19];
+	alarmIntervalMinOn = configParamters[20];
+	alarmIntervalMinOff = configParamters[21];
+	powerOnButton_enable = configParamters[22];
+	powerOnButton_time = configParamters[23];
+
+	flashConfig();
+}
+
+
 
 void flashValue(uint32_t address, uint32_t data)
 {
@@ -1161,7 +1277,7 @@ void Alarm_Handler(void)
 
 void initialCheck(void)
 {
-	  if (alarmInterval == 0xFF)
+	  if (powerOnButton_enable == 0xFF)
 	  {
 		  modus = 1;
 		  alarmDate = 0;
@@ -1184,7 +1300,8 @@ void initialCheck(void)
 		  alarmInterval = 0;
 		  alarmIntervalMinOn = 0;
 		  alarmIntervalMinOff = 0;
-
+		  powerOnButton_enable = 0;
+		  powerOnButton_time = 30;
 
 		  flashConfig();
 	  }
@@ -1245,7 +1362,7 @@ void StartDefaultTask(void const * argument)
 		  return 0;
 		}
 
-	  osDelay(5000);
+	  osDelay(1000);
 	  MX_USART1_UART_Init();
 
 
@@ -1266,14 +1383,121 @@ void StartDefaultTask(void const * argument)
 	  }
 	  sek++;
 
-	  if(poweroff_flag == 1 && power_on_button_counter<= 30)
+	  if (modus == 5)
+	  {
+		  threeStageMode = 1;
+		  modus = 1;
+	  }
+	  else if (modus == 6)
+	  {
+		  threeStageMode = 2;
+		  modus = 2;
+	  }
+
+	  if (threeStageMode > 0)
+	  {
+		  if (threeStageMode == 1)
+		  {
+			  if (output_status == 1)
+			  {
+				  if (rawValue[0] > minWide)
+				  {
+					  modus = 1;
+				  }
+
+				  else
+				  {
+					  modus = 3;
+				  }
+
+				  if (watchdog_update == 0)
+				  {
+				     reconfigureWatchdog();
+				     watchdog_update = 1;
+				  }
+			  }
+
+			  else if (output_status == 0 || output_status == 2 || output_status == 3)
+			  {
+				  if (rawValue[2] > minUSB)
+				  {
+					  modus = 1;
+					  watchdog_update = 0;
+				  }
+				  else
+				  {
+					  if (modus != 4)
+					  {
+						  modus = 4;
+						  watchdog_update = 0;
+					  }
+				  }
+
+				  if (watchdog_update == 0)
+				  {
+				     reconfigureWatchdog();
+				     watchdog_update = 1;
+				  }
+			  }
+		  }
+
+		  if (threeStageMode == 2)
+		  {
+			  if (output_status == 2)
+			  {
+				  if (rawValue[2] > minUSB)
+				  {
+					  modus = 2;
+					  watchdog_update = 0;
+				  }
+
+				  else
+				  {
+					  modus = 4;
+				  }
+
+				  if (watchdog_update == 0)
+				  {
+				     reconfigureWatchdog();
+				     watchdog_update = 1;
+				  }
+			  }
+
+			  else if (output_status == 0 || output_status == 1 || output_status == 3)
+			  {
+				  if (rawValue[0] > minWide)
+				  {
+					  modus = 2;
+					  watchdog_update = 0;
+				  }
+				  else
+				  {
+					  if (modus != 3)
+					  {
+						  modus = 3;
+						  watchdog_update = 0;
+					  }
+				  }
+
+				  if (watchdog_update == 0)
+				  {
+				     reconfigureWatchdog();
+				     watchdog_update = 1;
+				  }
+			  }
+		  }
+	  }
+
+
+	  if(poweroff_flag == 1 && power_on_button_counter <= powerOnButton_time)
 	  {
 		  power_on_button_counter++;
 
-		  if (power_on_button_counter > 30)
+		  if (power_on_button_counter > powerOnButton_time)
 		  {
+			  Config_Reset_Pin_Input();
 
-			  if(HAL_GPIO_ReadPin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin) == 1)
+			  if(HAL_GPIO_ReadPin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin) == 1 && powerOnButton_enable == 1)
 			  {
 			  power_on_button_counter = 0;
 
@@ -1316,6 +1540,7 @@ void StartDefaultTask(void const * argument)
 			  						  powerBat_flag = 1;
 			  					  }
 			  				  }
+			  Config_Reset_Pin_Output();
 			  }
 		  }
 	  }
@@ -1392,6 +1617,10 @@ void StartDefaultTask(void const * argument)
 		  			Power_USB();
 		  			__HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_AWD);
 		  			__HAL_ADC_ENABLE_IT(&hadc, ADC_IT_AWD);
+		  			if(serialLessMode)
+		  			{
+		  				HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_SET);
+		  			}
 		  			shutdown_time_counter = 0;
 		  			powerBat_flag = 0;
 
@@ -1410,6 +1639,12 @@ void StartDefaultTask(void const * argument)
 		  			Power_Wide();
 		  			__HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_AWD);
 		  			__HAL_ADC_ENABLE_IT(&hadc, ADC_IT_AWD);
+
+		  			if(serialLessMode)
+		  			{
+		  				HAL_GPIO_WritePin(RESET_Rasp_GPIO_Port,RESET_Rasp_Pin,GPIO_PIN_SET);
+		  			}
+
 		  			shutdown_time_counter = 0;
 		  			powerBat_flag = 0;
 
@@ -1446,11 +1681,11 @@ void StartDefaultTask(void const * argument)
 	  {
 		  if (measuredValue[1] > 3220)
 			  batLevel = 4;
-		  else if (measuredValue[1] <= 3220 &&  measuredValue[1] > 3180)
+		  else if (measuredValue[1] <= 3220 &&  measuredValue[1] > 3100)
 			  batLevel = 3;
-		  else if (measuredValue[1] <= 3180 &&  measuredValue[1] > 3140)
+		  else if (measuredValue[1] <= 3100 &&  measuredValue[1] > 2800)
 			  batLevel = 2;
-		  else if (measuredValue[1] <= 3140 &&  measuredValue[1] > 2500)
+		  else if (measuredValue[1] <= 2800 &&  measuredValue[1] > 2500)
 			  batLevel = 1;
 		  else
 			  batLevel = 0;
@@ -1459,11 +1694,11 @@ void StartDefaultTask(void const * argument)
 	  {
 		  if (measuredValue[1] > (3220+chargingOffset))
 			  batLevel = 4;
-		  else if (measuredValue[1] <= (3220+chargingOffset) &&  measuredValue[1] > (3180+chargingOffset))
+		  else if (measuredValue[1] <= (3220+chargingOffset) &&  measuredValue[1] > (3100+chargingOffset))
 			  batLevel = 3;
-		  else if (measuredValue[1] <= (3180+chargingOffset) &&  measuredValue[1] > (3140+chargingOffset))
+		  else if (measuredValue[1] <= (3100+chargingOffset) &&  measuredValue[1] > (2800+chargingOffset))
 			  batLevel = 2;
-		  else if (measuredValue[1] <= (3140+chargingOffset) &&  measuredValue[1] > (2500+chargingOffset))
+		  else if (measuredValue[1] <= (2800+chargingOffset) &&  measuredValue[1] > (2500+chargingOffset))
 			  batLevel = 1;
 		  else
 			  batLevel = 0;
@@ -1491,6 +1726,7 @@ void StartDefaultTask(void const * argument)
 	  		  			Power_Off();
 	  		  		}
 
+	powerfailure_counter_block = 0;
     osDelay(1000);
   }
   /* USER CODE END 5 */ 

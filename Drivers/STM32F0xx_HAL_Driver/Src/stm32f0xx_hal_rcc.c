@@ -304,7 +304,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
         /* Wait till HSE is ready */
         while(__HAL_RCC_GET_FLAG(RCC_FLAG_HSERDY) == RESET)
         {
-          if((HAL_GetTick() - tickstart ) > HSE_TIMEOUT_VALUE)
+        	if((HAL_GetTick() - tickstart ) > HSE_TIMEOUT_VALUE)
           {
             return HAL_TIMEOUT;
           }
