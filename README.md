@@ -112,7 +112,6 @@ Firmware 1.5
  
 Firmware 1.6
 - New Configuration Method: Because of the limited space in the Flash-Memory of the STM32F031 MCU, the configuration method for the StromPi Features has changed to a python script - this script features an assistant which shows you the current configuration parameters and helps you to change them to your desired setup.
-
 You can find this script following this link: https://github.com/joy-it/strompi3/blob/master/StromPi3-Config/strompi_config.py
 In the CLI (Command Line Interface), which was the previous configuration method, there are only basic features left - when you still want to use the configuration method through the CLI, then you can change to the CLI-Version of the firware (you can find it following this link: https://github.com/joy-it/strompi3-cliconfig or https://strompi.joy-it.net/wp-content/uploads/2019/04/StromPi3_v1.6_CLI.zip), but this version will have a lesser featureset, than the main version.
 - Feature to show the current Voltage-Source:
