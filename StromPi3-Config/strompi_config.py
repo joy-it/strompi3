@@ -391,7 +391,8 @@ try:
     print(' Interval-On-Time: ' + str(sp3_intervalAlarmOnTime, 'utf-8').rstrip('\n').zfill(2) + ' minutes')
     print(' Interval-Off-Time: ' + str(sp3_intervalAlarmOffTime, 'utf-8').rstrip('\n').zfill(2) + ' minutes')
     print(' ')
-
+    
+    alarmconfig = '0'
     alarmconfig = input('Do you want to change the Alarm-Configuration? (Y) Yes | (N) No:')
     while not (alarmconfig == 'Y' or alarmconfig == 'N'):
         alarmconfig = input(
@@ -402,7 +403,8 @@ try:
         print('\n----------------------------------------------')
         print(' Power-Off Alarm Configuration')
         print('-----------------------------------------------')
-
+        
+        alarmconfig = '0'
         alarmconfig = input('Do you want to change the Power-Off Alarm-Configuration? (Y) Yes | (N) No:')
         while not (alarmconfig == 'Y' or alarmconfig == 'N'):
             alarmconfig = input('Failed! Value not in Range - Please try again\nDo you want to change the Alarm-Configuration? (Y) Yes | (N) No: ')
@@ -431,7 +433,8 @@ try:
         print('\n---------------------------------------------------------------------------')
         print(' Wake-Up Alarm-Configuration')
         print('---------------------------------------------------------------------------')
-
+        
+        alarmconfig = '0'
         alarmconfig = input('Do you want to change the Wake-Up Alarm-Configuration? (Y) Yes | (N) No:')
         while not (alarmconfig == 'Y' or alarmconfig == 'N'):
             alarmconfig = input('Failed! Value not in Range - Please try again\nDo you want to change the Alarm-Configuration? (Y) Yes | (N) No: ')
@@ -490,7 +493,8 @@ try:
         print('\n----------------------------------------------')
         print(' Interval-Alarm Configuration')
         print('-----------------------------------------------')
-
+        
+        alarmconfig = '0'
         alarmconfig = input('Do you want to change the Interval-Alarm-Configuration? (Y) Yes | (N) No:')
         while not (alarmconfig == 'Y' or alarmconfig == 'N'):
             alarmconfig = input('Failed! Value not in Range - Please try again\nDo you want to change the Alarm-Configuration? (Y) Yes | (N) No: ')
@@ -500,11 +504,11 @@ try:
             print('\n--------------------------------------')
             print('\nEnabling or disabling the Interval-Alarm (0 = disable, 1 = enable)\n')
 
-            intervalEnable = input('Interval-Alarm status (0 - 1): ')
-            while int(intervalEnable) < 0 or int(intervalEnable) > 1:
-                intervalEnable = input('Failed! Value not in Range - Please try again\nInterval-Alarm status (0 - 1): ')
+            sp3_intervalAlarm = input('Interval-Alarm status (0 - 1): ')
+            while int(sp3_intervalAlarm) < 0 or int(sp3_intervalAlarm) > 1:
+                sp3_intervalAlarm = input('Failed! Value not in Range - Please try again\nInterval-Alarm status (0 - 1): ')
 
-            if int(intervalEnable) == 1:
+            if int(sp3_intervalAlarm) == 1:
                 print('\n--------------------------------------')
                 print('\nSetting Interval-Time Settings\n')
 
