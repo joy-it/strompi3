@@ -135,3 +135,14 @@ Request Firmware Updates:
 ******************************************************************************************************************
 
 If you would need a function which isn't currently included in the StromPi3, please feel free to contact us via Mail (service@joy-it.net), so we can include it in our next Firmware-Updates
+
+
+******************************************************************************************************************
+	
+Support
+
+******************************************************************************************************************
+
+As for Support for our Firmware, please contact us via E-Mail: service@joy-it.net
+or use our FAQ-Board at: https://strompi.joy-it.net/questions/
+
