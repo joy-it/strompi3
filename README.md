@@ -128,6 +128,13 @@ In the CLI (Command Line Interface), which was the previous configuration method
 - BatteryLevelShutdown:
  The Threshold Values were changed to more lower values (< 2800mV -> 10% | < 3100mV -> 25% | < 3220mV -> 50%) to extend battery operation with the an active BatteryLevelShutdown.
 
+Firmware 1.7
+- Power-Save-Mode: If you connect a Voltage-Source to the Wide-Input which is limited in it's energy (like a 12V Battery) you can now activate the Power-Save-Mode of the StromPi3 which is decreasing the standby current of this voltage source to a mere fraction. Please be aware that in high-power configurations, where the StromPi3 has to deliver about 2,5A and up, in the activated Power-Save-Mode there can occure some instabilities which results in a reboot of the Raspberry Pi.
+- Revised Serial-Less Mode: There is now a second stage of the Serial-Less Mode which disconnects the UART Pins of the StromPi3 STM32 Controller completely from the TX/RX-Lines of the Raspberry Pi. As for this the compatibility of HATs/Expansions, which are also using the UART interface, is increased. Please refer to the Manuals and Scripts for activating and deactivating this mode.
+
+Firmware 1.71
+- (Emergency) PowerOff-Mode: This Feature shuts down the Raspberry Pi through the normal Shutdown procedure after a powerfailure and will procede into and maintain a poweroffstate even if the main Powersource would come back. Only a WakeUP Timer Event or a PowerOn Button will then be able to bring back the StromPi3 to  normal Operation. As for this please refer to the manual of the StromPi3. 
+      
 ******************************************************************************************************************
 	
 Request Firmware Updates:
@@ -135,3 +142,13 @@ Request Firmware Updates:
 ******************************************************************************************************************
 
 If you would need a function which isn't currently included in the StromPi3, please feel free to contact us via Mail (service@joy-it.net), so we can include it in our next Firmware-Updates
+
+
+******************************************************************************************************************
+	
+Support
+
+******************************************************************************************************************
+
+As for Support for our Firmware, please contact us via E-Mail: service@joy-it.net
+or use our FAQ-Board at: https://strompi.joy-it.net/questions/
