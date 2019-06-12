@@ -152,3 +152,4 @@ Support
 
 As for Support for our Firmware, please contact us via E-Mail: service@joy-it.net
 or use our FAQ-Board at: https://strompi.joy-it.net/questions/
+
