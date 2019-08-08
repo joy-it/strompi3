@@ -114,7 +114,6 @@ void Config_Reset_Pin_Output(void);
 
 uint8_t poweroff_flag;
 uint8_t interval_off_flag;
-uint8_t manual_poweroff_flag;
 
 uint8_t power_on_button_counter;
 
@@ -160,6 +159,8 @@ uint8_t shutdown_flag;
 uint8_t shutdown_time_counter;
 uint8_t alarm_shutdown_time_counter;
 
+uint8_t alarmPoweroff_flag;
+uint8_t manual_poweroff_flag;
 uint16_t shutdown_time;
 uint8_t shutdown_enable;
 
@@ -191,13 +192,18 @@ uint8_t powersave_enable;
 
 uint8_t poweroff_enable;
 
+uint8_t wakeupweekend_enable;
+
+uint8_t wakeup_time_enable;
+uint16_t wakeup_time;
+uint16_t wakeup_time_counter;
 uint8_t serialLess_timer;
 uint8_t serialLess_communication_off_counter;
 uint8_t serialLess_communication_on_flag;
 
 void reconfigureWatchdog();
 
-#define configMax 26
+#define configMax 29
 
 uint32_t configParamters[configMax];
 
@@ -228,6 +234,9 @@ uint32_t configParamters[configMax];
 #define powerOnButton_time_FlashAdress 0x8007D60
 #define powersave_enable_FlashAdress 0x8007D70
 #define poweroff_enable_FlashAdress 0x8007D80
+#define wakeup_time_enable_FlashAdress 0x8007D90
+#define wakeup_time_FlashAdress 0x8007DA0
+#define wakeupweekend_enable_FlashAdress 0x8007DB0
 
 void flashConfig(void);
 void flashValue(uint32_t address, uint32_t data);

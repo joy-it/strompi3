@@ -76,7 +76,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[9] = "v1.71";
+char firmwareVersion[9] = "v1.72";
 
 /* FreeRTOS+IO includes. */
 
@@ -1074,6 +1074,12 @@ static portBASE_TYPE prvStatusRPi(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", poweroff_enable);
 
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", wakeup_time_enable);
+
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", wakeup_time);
+
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", wakeupweekend_enable);
+
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", measuredValue[0]);
 
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "%lu\n", measuredValue[1]);
@@ -1325,7 +1331,7 @@ static portBASE_TYPE prvShowAlarm(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 
 	sprintf((char *) pcWriteBuffer, "\r\n Time: %02d:%02d:%02d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
 
-	char temp_message[20];
+	char temp_message[21];
 
 	switch (sdatestructureget.WeekDay)
 	{
@@ -1365,7 +1371,9 @@ static portBASE_TYPE prvShowAlarm(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 	}
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n WakeUp-Alarm: %s ", temp_message);
 
-	if (alarmTime == 1)
+	if (wakeup_time_enable == 1)
+		strcpy(temp_message, "Minute Wakeup Alarm");
+	else if (alarmTime == 1)
 		strcpy(temp_message, "Time-Alarm");
 	else if (alarmDate == 1)
 		strcpy(temp_message, "Date-Alarm");
@@ -1377,6 +1385,17 @@ static portBASE_TYPE prvShowAlarm(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n  Alarm-Time: %02d:%02d", alarm_hour, alarm_min);
 
 	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n  Alarm-Date: %02d.%02d", alarm_day, alarm_month);
+
+
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "  \r\n  Minute Wakeup Time: %d ", wakeup_time);
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "minutes");
+
+
+	if (wakeup_time_enable == 1)
+	{
+		sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "  \r\n  Minute Wakeup Time: %d ", wakeup_time);
+		sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "minutes");
+	}
 
 	switch (alarm_weekday)
 	{
@@ -1403,7 +1422,19 @@ static portBASE_TYPE prvShowAlarm(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 		break;
 	}
 
-	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n  Alarm-Weekday: %s \r\n", temp_message);
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n  Alarm-Weekday: %s ", temp_message);
+
+	switch (wakeupweekend_enable)
+	{
+	case 0:
+		strcpy(temp_message, "Disabled");
+		break;
+	case 1:
+		strcpy(temp_message, "Enabled");
+		break;
+	}
+
+	sprintf((char *) pcWriteBuffer + strlen((char *) pcWriteBuffer), "\r\n  Weekend Wake-Up: %s \r\n ", temp_message);
 
 	switch (alarmPoweroff)
 	{

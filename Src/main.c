@@ -215,6 +215,10 @@ int main(void)
 	powerOnButton_time = *(uint16_t *) powerOnButton_time_FlashAdress;
 	powersave_enable = *(uint16_t *) powersave_enable_FlashAdress;
 	poweroff_enable = *(uint16_t *) poweroff_enable_FlashAdress;
+	wakeup_time_enable = *(uint8_t *) wakeup_time_enable_FlashAdress;
+	wakeup_time = *(uint16_t *) wakeup_time_FlashAdress;
+	wakeupweekend_enable = *(uint8_t *) wakeupweekend_enable_FlashAdress;
+
 
 	/*** Only for manufacturing | Checks if the Flash Area of the STM32F031 is blank - in this case it preprogramm it with a default configuration ***/
 	initialCheck();
@@ -244,7 +248,11 @@ int main(void)
 	configParamters[23] = powerOnButton_time;
 	configParamters[24] = powersave_enable;
 	configParamters[25] = poweroff_enable;
+	configParamters[26] = wakeup_time_enable;
+	configParamters[27] = wakeup_time;
+	configParamters[28] = wakeupweekend_enable;
 
+	wakeup_time_counter = wakeup_time;
 	alarmIntervalMinOn_Counter = alarmIntervalMinOn;
 	alarmIntervalMinOff_Counter = alarmIntervalMinOff;
 
@@ -760,7 +768,6 @@ void Power_Off(void)
 	HAL_GPIO_WritePin(BOOST_EN_GPIO_Port, BOOST_EN_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(CTRL_VUSB_GPIO_Port, CTRL_VUSB_Pin, GPIO_PIN_RESET);
 }
-
 /*********************************************************************************/
 
 /*** Functions to output the warning message, when the state of the StromPi3 have changes
@@ -1022,6 +1029,9 @@ void flashConfig(void)
 	flashValue(powerOnButton_time_FlashAdress, powerOnButton_time);
 	flashValue(powersave_enable_FlashAdress, powersave_enable);
 	flashValue(poweroff_enable_FlashAdress, poweroff_enable);
+	flashValue(wakeup_time_enable_FlashAdress, wakeup_time_enable);
+	flashValue(wakeup_time_FlashAdress, wakeup_time);
+	flashValue(wakeupweekend_enable_FlashAdress, wakeupweekend_enable);
 
 	HAL_FLASH_Lock();
 
@@ -1054,6 +1064,11 @@ void updateConfig(void)
 	powerOnButton_time = configParamters[23];
 	powersave_enable = configParamters[24];
 	poweroff_enable = configParamters[25];
+	wakeup_time_enable = configParamters[26];
+	wakeup_time = configParamters[27];
+	wakeupweekend_enable = configParamters[28];
+	wakeup_time_counter = wakeup_time;
+
 
 	flashConfig();
 }
@@ -1117,13 +1132,25 @@ void Alarm_Handler(void)
 			ShutdownRPi();
 			Config_Reset_Pin_Input();
 			alarm_shutdown_time_counter = shutdown_time;
+			alarmPoweroff_flag = 1;
 
 		}
 	}
 
+	if ((wakeup_time_counter != 0 && wakeup_time_enable == 1 && poweroff_flag == 1) && (manual_poweroff_flag == 1 || alarmPoweroff_flag == 1))
+	{
+		wakeup_time_counter--;
+	}
+	if ((wakeup_time_counter == 0 && wakeup_time_enable == 1 && poweroff_flag == 1) && (manual_poweroff_flag == 1 || alarmPoweroff_flag == 1))
+	{
+		poweroff_flag = 0;
+		wakeup_time_counter = wakeup_time;
+		manual_poweroff_flag = 0;
+		alarmPoweroff_flag = 0;
+	}
 	if (alarm_enable == 1)
 	{
-		if (alarmTime == 1)
+		if ((alarmTime == 1 && wakeupweekend_enable == 0) && (sdatestructureget.WeekDay >= 1 && sdatestructureget.WeekDay <= 5))
 		{
 			if (alarm_min == stimestructureget.Minutes && alarm_hour == stimestructureget.Hours)
 			{
@@ -1168,6 +1195,51 @@ void Alarm_Handler(void)
 				}
 			}
 		}
+		if (alarmTime == 1 && wakeupweekend_enable == 1)
+				{
+					if (alarm_min == stimestructureget.Minutes && alarm_hour == stimestructureget.Hours)
+					{
+						if (modus == 1 || modus == 3)
+						{
+							if (rawValue[2] > minUSB)
+							{
+								poweroff_flag = 0;
+								Power_USB();
+							}
+							else if (modus == 1)
+							{
+								poweroff_flag = 0;
+								Power_Wide();
+							}
+							else if (modus == 3)
+							{
+								poweroff_flag = 0;
+								Power_Bat();
+								powerBat_flag = 1;
+							}
+						}
+
+						else if (modus == 2 || modus == 4)
+						{
+							if (rawValue[0] > minWide)
+							{
+								poweroff_flag = 0;
+								Power_Wide();
+							}
+							else if (modus == 2)
+							{
+								poweroff_flag = 0;
+								Power_USB();
+							}
+							else if (modus == 4)
+							{
+								poweroff_flag = 0;
+								Power_Bat();
+								powerBat_flag = 1;
+							}
+						}
+					}
+				}
 		else if (alarmWeekDay == 1)
 		{
 			if (alarm_min == stimestructureget.Minutes && alarm_hour == stimestructureget.Hours && alarm_weekday == sdatestructureget.WeekDay)
@@ -1305,7 +1377,7 @@ void Alarm_Handler(void)
 
 void initialCheck(void)
 {
-	if (poweroff_enable == 0xFF)
+	if (wakeupweekend_enable == 0xFF)
 	{
 		modus = 1;
 		alarmDate = 0;
@@ -1332,6 +1404,10 @@ void initialCheck(void)
 		powerOnButton_time = 30;
 		powersave_enable = 0;
 		poweroff_enable = 0;
+		wakeup_time_enable = 0;
+		wakeup_time = 30;
+		wakeupweekend_enable = 1;
+
 
 		flashConfig();
 	}
@@ -1787,7 +1863,6 @@ void StartDefaultTask(void const * argument)
 			}
 
 		}
-
 		powerfailure_counter_block = 0;
 		osDelay(1000);
 	}

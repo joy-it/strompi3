@@ -135,6 +135,9 @@ Firmware 1.7
 Firmware 1.71
 - (Emergency) PowerOff-Mode: This Feature shuts down the Raspberry Pi through the normal Shutdown procedure after a powerfailure and will procede into and maintain a poweroffstate even if the main Powersource would come back. Only a WakeUP Timer Event or a PowerOn Button will then be able to bring back the StromPi3 to  normal Operation. As for this please refer to the manual of the StromPi3. 
       
+Firmware 1.72
+- Weekend-Wakeup-Alarm: This mode allows you to choose if the WakeUp-Alarm will operate on weekends (saturday and sunday).
+- Minute Wakeup Alarm: The Minute-WakeUp-Alarm allows you to set a timer, that will start the RaspberryPi after a set time, when it was shutdown through the poweroff command or the poweroff timer.
 ******************************************************************************************************************
 	
 Request Firmware Updates:
