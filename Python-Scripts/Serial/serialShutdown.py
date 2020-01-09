@@ -28,14 +28,14 @@ counter=0
 
 while 1:
  x=ser.readline()
- if x==('xxxShutdownRaspberryPixxx\n'):
-  print "PowerFail - Raspberry Pi Shutdown"
+ y = x.decode(encoding='UTF-8',errors='strict')
+ if y==('xxxShutdownRaspberryPixxx\n'):
+  print ("PowerFail - Raspberry Pi Shutdown")
   t= wait_for_shutdowntimer + 1
- elif x==('xxx--StromPiPowerBack--xxx\n'):
-  print "PowerBack - Raspberry Pi Shutdown aborted"
+ elif y==('xxx--StromPiPowerBack--xxx\n'):
+  print ("PowerBack - Raspberry Pi Shutdown aborted")
   t=0
  if t>0:
   t-=1
   if t == 1:
    os.system("sudo shutdown -h now")
-

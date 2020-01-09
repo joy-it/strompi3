@@ -1,5 +1,7 @@
 import serial
+import threading
 from time import sleep
+import time
 import datetime
 import os
 
@@ -18,13 +20,13 @@ serial_port.open()
 
 
 try:
-    serial_port.write('Q')
+    serial_port.write(str.encode('Q'))
     sleep(1)
-    serial_port.write('\x0D')
+    serial_port.write(str.encode('\x0D'))
     sleep(1)
-    serial_port.write('date-rpi')
+    serial_port.write(str.encode('date-rpi'))
     sleep(0.1)
-    serial_port.write('\x0D')
+    serial_port.write(str.encode('\x0D'))
     data = serial_port.read(9999);
     date = int(data)
 
@@ -33,9 +35,9 @@ try:
     strompi_day = date % 100
 
     sleep(0.1)
-    serial_port.write('time-rpi')
+    serial_port.write(str.encode('time-rpi'))
     sleep(0.1)
-    serial_port.write('\x0D')
+    serial_port.write(str.encode('\x0D'))
     data = serial_port.read(9999);
     timevalue = int(data)
 
@@ -49,24 +51,24 @@ try:
     command = 'set-time %02d %02d %02d' % (int(rpi_time.strftime('%H')),int(rpi_time.strftime('%M')),int(rpi_time.strftime('%S')))
 
     if rpi_time > strompi_time:
-        serial_port.write('set-date %02d %02d %02d %02d' % (int(rpi_time.strftime('%d')),int(rpi_time.strftime('%m')),int(rpi_time.strftime('%Y'))%100,int(rpi_time.isoweekday())))
+        serial_port.write(str.encode('set-date %02d %02d %02d %02d' % (int(rpi_time.strftime('%d')),int(rpi_time.strftime('%m')),int(rpi_time.strftime('%Y'))%100,int(rpi_time.isoweekday()))))
         sleep(0.5)
-        serial_port.write('\x0D')
+        serial_port.write(str.encode('\x0D'))
         sleep(1)
-        serial_port.write('set-clock %02d %02d %02d' % (int(rpi_time.strftime('%H')),int(rpi_time.strftime('%M')),int(rpi_time.strftime('%S'))))
+        serial_port.write(str.encode('set-clock %02d %02d %02d' % (int(rpi_time.strftime('%H')),int(rpi_time.strftime('%M')),int(rpi_time.strftime('%S')))))
         sleep(0.5)
-        serial_port.write('\x0D')
+        serial_port.write(str.encode('\x0D'))
 
-        print '-----------------------------------------'
-        print 'The date und time has been synced: Raspberry Pi -> StromPi'
-        print '-----------------------------------------'
+        print ('-----------------------------------------')
+        print ('The date und time has been synced: Raspberry Pi -> StromPi')
+        print ('-----------------------------------------')
 
     else:
         os.system('sudo date +%%y%%m%%d --set=%02d%02d%02d' % (strompi_year, strompi_month, strompi_day))
         os.system('sudo date +%%T -s "%02d:%02d:%02d"' % (strompi_hour, strompi_min, strompi_sec))
-        print '-----------------------------------------'
-        print 'The date und time has been synced: StromPi -> Raspberry Pi'
-        print '-----------------------------------------'
+        print ('-----------------------------------------')
+        print ('The date und time has been synced: StromPi -> Raspberry Pi')
+        print ('-----------------------------------------')
 
 except KeyboardInterrupt:
     print('interrupted!')
