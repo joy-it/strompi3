@@ -676,16 +676,28 @@ static void MX_GPIO_Init(void)
  * Functions to change the Reset Pin Function for the Serial-Less Mode and the PowerON Button
  */
 
-void Config_Reset_Pin_Input(void)
+void Config_Reset_Pin_Input_PullUP(void)
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	GPIO_InitStruct.Pin = RESET_Rasp_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(RESET_Rasp_GPIO_Port, &GPIO_InitStruct);
 }
+
+void Config_Reset_Pin_Input_PullDOWN(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	GPIO_InitStruct.Pin = RESET_Rasp_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(RESET_Rasp_GPIO_Port, &GPIO_InitStruct);
+}
+
 
 
 void Config_Reset_Pin_Output(void)
@@ -1130,7 +1142,7 @@ void Alarm_Handler(void)
 		{
 			poweroff_flag = 1;
 			ShutdownRPi();
-			Config_Reset_Pin_Input();
+			Config_Reset_Pin_Input_PullDOWN();
 			alarm_shutdown_time_counter = shutdown_time;
 			alarmPoweroff_flag = 1;
 
@@ -1506,7 +1518,7 @@ void StartDefaultTask(void const * argument)
 
 		if (serialLessMode == 1 && serialLess_communication_on_flag != 1 && serialLess_communication_off_counter > 0)
 		{
-			Config_Reset_Pin_Input();
+			Config_Reset_Pin_Input_PullUP();
 			if (HAL_GPIO_ReadPin(RESET_Rasp_GPIO_Port, RESET_Rasp_Pin) == 0)
 			{
 				serialLess_communication_off_counter--;
@@ -1634,7 +1646,7 @@ void StartDefaultTask(void const * argument)
 		{
 			if (power_on_button_counter > powerOnButton_time)
 			{
-				Config_Reset_Pin_Input();
+				Config_Reset_Pin_Input_PullDOWN();
 
 				if (HAL_GPIO_ReadPin(RESET_Rasp_GPIO_Port, RESET_Rasp_Pin) == 1 && powerOnButton_enable == 1)
 				{

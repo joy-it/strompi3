@@ -76,7 +76,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[9] = "v1.72";
+char firmwareVersion[9] = "v1.72b";
 
 /* FreeRTOS+IO includes. */
 
@@ -877,7 +877,7 @@ static portBASE_TYPE prvPowerOff(int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 	alarm_shutdown_enable = 1;
 	console_start = 0;
 
-	Config_Reset_Pin_Input();
+	Config_Reset_Pin_Input_PullDOWN();
 
 	strcpy((char *) pcWriteBuffer, (char *) pcMessage);
 
