@@ -138,6 +138,14 @@ Firmware 1.71
 Firmware 1.72
 - Weekend-Wakeup-Alarm: This mode allows you to choose if the WakeUp-Alarm will operate on weekends (saturday and sunday).
 - Minute Wakeup Alarm: The Minute-WakeUp-Alarm allows you to set a timer, that will start the RaspberryPi after a set time, when it was shutdown through the poweroff command or the poweroff timer.
+
+Firmware 1.72b
+- Small Bugfix (shutdown_time_counter)
+- Preparation for Hardware Rev 1.1 
+
+Firmware 1.72c
+- Bugfix on Interval Feature - Thanks @ctc
+
 ******************************************************************************************************************
 	
 Request Firmware Updates:
