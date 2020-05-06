@@ -1377,6 +1377,10 @@ void Alarm_Handler(void)
 			interval_off_flag = 1;
 			ShutdownRPi();
 			alarm_shutdown_time_counter = shutdown_time;
+			if( alarmIntervalMinOff_Counter == 0)
+			{
+				alarmIntervalMinOff_Counter = alarmIntervalMinOff;
+			}
 		}
 
 	}
