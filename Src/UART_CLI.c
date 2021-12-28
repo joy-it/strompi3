@@ -76,7 +76,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[9] = "v1.72c";
+char firmwareVersion[9] = "v1.73";
 
 /* FreeRTOS+IO includes. */
 
@@ -874,6 +874,7 @@ static portBASE_TYPE prvPowerOff(int8_t *pcWriteBuffer, size_t xWriteBufferLen, 
 
 	poweroff_flag = 1;
 	manual_poweroff_flag = 1;
+
 	alarm_shutdown_enable = 1;
 	console_start = 0;
 

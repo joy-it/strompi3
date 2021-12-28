@@ -768,6 +768,7 @@ void Power_Bat(void)
 
 void Power_Off(void)
 {
+	poweroff_flag = 1;
 	output_status = 0;
 	charging = 0;
 
@@ -917,24 +918,27 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 	 *
 	 *   ***/
 
-	if (modus == 1)
+	if ((modus == 1 && poweroff_enable !=1) || (modus == 1 && poweroff_flag != 1))
 	{
+		poweroff_flag = 0;
 		Power_Wide();
 		if (warning_enable == 1)
 		{
 			warning_flag = 1;
 		}
 	}
-	else if (modus == 2)
+	else if ((modus == 2 && poweroff_enable !=1) || (modus == 2 && poweroff_flag != 1))
 	{
+		poweroff_flag = 0;
 		Power_USB();
 		if (warning_enable == 1)
 		{
 			warning_flag = 1;
 		}
 	}
-	else if (modus == 3 || modus == 4)
+	else if ((modus == 3 && poweroff_enable !=1) || (modus == 3 && poweroff_flag != 1) || (modus == 4 && poweroff_enable !=1) || (modus == 4 && poweroff_flag != 1))
 	{
+		poweroff_flag = 0;
 		Power_Bat();
 		powerBat_flag = 1;
 		if (warning_enable == 1)
@@ -943,7 +947,7 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 		}
 	}
 
-	if (manual_poweroff_flag == 1)
+	if (manual_poweroff_flag == 1 && poweroff_enable != 1)
 	{
 		poweroff_flag = 0;
 		manual_poweroff_flag = 0;
@@ -956,10 +960,10 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
 	{
 		shutdown_flag = 1;
 
-		if (poweroff_enable == 1)
+		/*if (poweroff_enable == 1)
 		{
 			poweroff_flag = 1;
-		}
+		}*/
 
 	}
 
@@ -1468,13 +1472,15 @@ void StartDefaultTask(void const * argument)
 		osDelay(500);
 		MX_ADC_Init();
 
-		if (modus == 1 || modus == 3)
+		if ((modus == 1 || modus == 3) && (poweroff_enable != 1 || poweroff_flag != 1))
 		{
+			poweroff_flag = 0;
 			Power_USB();
 			configureAWD_USB();
 		}
-		else if (modus == 2 || modus == 4)
+		else if ((modus == 2 || modus == 4) && (poweroff_enable != 1 || poweroff_flag != 1))
 		{
+			poweroff_flag = 0;
 			Power_Wide();
 			configureAWD_Wide();
 		}
@@ -1660,16 +1666,19 @@ void StartDefaultTask(void const * argument)
 					{
 						if (rawValue[2] > minUSB)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_USB();
 						}
 						else if (modus == 1)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_Wide();
 						}
 						else if (modus == 3)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_Bat();
 							powerBat_flag = 1;
@@ -1680,16 +1689,19 @@ void StartDefaultTask(void const * argument)
 					{
 						if (rawValue[0] > minWide)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_Wide();
 						}
 						else if (modus == 2)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_USB();
 						}
 						else if (modus == 4)
 						{
+							manual_poweroff_flag = 0;
 							poweroff_flag = 0;
 							Power_Bat();
 							powerBat_flag = 1;
@@ -1708,6 +1720,7 @@ void StartDefaultTask(void const * argument)
 
 			if (shutdown_time_counter == 0)
 			{
+				poweroff_flag = 1;
 				Power_Off();
 				batLevel_shutdown_flag = 0;
 			}
@@ -1723,6 +1736,7 @@ void StartDefaultTask(void const * argument)
 
 			if (alarm_shutdown_time_counter == 0)
 			{
+				poweroff_flag = 1;
 				Power_Off();
 			}
 		}
@@ -1766,8 +1780,10 @@ void StartDefaultTask(void const * argument)
 
 		if (modus == 1 || modus == 3)
 		{
-			if (rawValue[2] > minUSB && poweroff_flag != 1)
+			if ((rawValue[2] > minUSB  && poweroff_enable != 1 && manual_poweroff_flag != 1) || (rawValue[2] > minUSB && manual_poweroff_flag != 1 && poweroff_flag != 1))
 			{
+				poweroff_flag = 0;
+
 				Power_USB();
 				__HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_AWD);
 				__HAL_ADC_ENABLE_IT(&hadc, ADC_IT_AWD);
@@ -1791,8 +1807,9 @@ void StartDefaultTask(void const * argument)
 
 		if (modus == 2 || modus == 4)
 		{
-			if (rawValue[0] > minWide && poweroff_flag != 1)
+			if ((rawValue[0] > minWide && manual_poweroff_flag != 1 && poweroff_enable != 1)|| (rawValue[0] > minWide && manual_poweroff_flag != 1 && poweroff_flag != 1))
 			{
+				poweroff_flag = 0;
 				Power_Wide();
 				__HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_AWD);
 				__HAL_ADC_ENABLE_IT(&hadc, ADC_IT_AWD);
