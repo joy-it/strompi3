@@ -76,7 +76,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[9] = "v1.73";
+char firmwareVersion[9] = "v1.8";
 
 /* FreeRTOS+IO includes. */
 
@@ -127,18 +127,19 @@ void vUARTCommandConsoleStart(void)
 	/*** The available Commands are registered here.
 	 * Please refer to the definition of the commands here at the bottom of this file (UART_CLI.c)
 	 * and to the headerfile (UART_CLI.h)  ***/
+	FreeRTOS_CLIRegisterCommand(&xMode);
+	FreeRTOS_CLIRegisterCommand(&xSetDate);
+	FreeRTOS_CLIRegisterCommand(&xSetConfig);
+	FreeRTOS_CLIRegisterCommand(&xPowerOff);
+
 
 	FreeRTOS_CLIRegisterCommand(&xTimeOutput);
 	FreeRTOS_CLIRegisterCommand(&xADCOutput);
-	FreeRTOS_CLIRegisterCommand(&xMode);
 	FreeRTOS_CLIRegisterCommand(&xSetClock);
-	FreeRTOS_CLIRegisterCommand(&xSetDate);
-	FreeRTOS_CLIRegisterCommand(&xSetConfig);
 	FreeRTOS_CLIRegisterCommand(&xStartStromPiConsole);
 	FreeRTOS_CLIRegisterCommand(&xStartStromPiConsoleQuick);
 	FreeRTOS_CLIRegisterCommand(&xShowStatus);
 	FreeRTOS_CLIRegisterCommand(&xShowAlarm);
-	FreeRTOS_CLIRegisterCommand(&xPowerOff);
 	FreeRTOS_CLIRegisterCommand(&xTimeRPi);
 	FreeRTOS_CLIRegisterCommand(&xDateRPi);
 	FreeRTOS_CLIRegisterCommand(&xStatusRPi);

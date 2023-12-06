@@ -8,11 +8,35 @@ import serial
 import os
 import smtplib
 from email.mime.text import MIMEText
+from gpiozero import CPUTemperature, PWMLED
 GPIO.setmode(GPIO.BCM)
 
+##############################################################################
+#Hier muss der wait_for_shutdowntimer eingestellt werden - dieser wartet mit dem Herunterfahren des Raspberry Pi,
+# fuer den Fall dass die primaere Stromquelle wiederhergesttelt werden sollte
+# Dieser Timer muss kleiner sein, als der im StromPi3 eingestellte shutdown-timer, damit sicher heruntergefahren wird.
 
+#Here you have to set the wait_for_shutdowntimer in seconds - it waits with the shutdown of the Raspberry pi,
+# in the case the primary voltage source turns back on.
+# This timer have to be set lower than the configured shutdown-timer in the StromPi3 to make a safe shutdown.
+
+##############################################################################
+wait_for_shutdowntimer = 10;
+##############################################################################
 #Here you can choose whether you want to receive an email when the Raspberry Pi restarts - 1 to activate - 0 to deactivate
 Restart_Mail = 1
+
+
+led = PWMLED(2)	# PWM-Pin (GPIO 2)
+
+startTemp = 55	# Temperatur bei der der Luefter an geht
+
+pTemp = 4		# Proportionalanteil
+iTemp = 0.2		# Integralanteil
+
+fanSpeed = 0	# Lueftergeschwindigkeit
+sum = 0			# Speichervariable fuer iAnteil
+
 
 # This is The config for the EMAIL notification
 #----------------------------------------------
@@ -20,7 +44,7 @@ SERVER =    'SMTP.Beispiel.DE'
 PORT =      587
 EMAIL =    'Beispiel@abc.de'
 PASSWORT =  'Passwort'
-EMPFAENGER =    ['EmpfÃ¤nger1@abc.de' , 'EmpfÃ¤nger2@abc.com']
+EMPFAENGER =    ['Empfänger1@abc.de' , 'Empfänger2@abc.com']
 SUBJECT_Powerfail =   'Raspberry Pi Powerfail!'
 SUBJECT_Powerback =   'Raspberry Pi Powerback!'
 SUBJECT_Restart =     'Raspberry Pi Restart!'
@@ -97,24 +121,8 @@ else:
     print ("-----------------------------------------")
 	
 	
-	
-if serial_port.isOpen(): serial_port.close()
-serial_port.open()
-	
-serial_port.write(str.encode('quit'))
-time.sleep(0.1)
-serial_port.write(str.encode('\x0D'))
-time.sleep(0.2)
-serial_port.write(str.encode('set-config 0 2'))
-time.sleep(0.1)
-serial_port.write(str.encode('\x0D'))
-time.sleep(0.2)
-print ("Enabled Serialless")
 
 
-
-print ("E-Mail notification in  case of Powerfailure (CTRL-C for exit)")
-# Set pin as input
 
 
 def Sendmail_Restart():
@@ -149,7 +157,6 @@ def Sendmail_Restart():
 	msg['From'] = EMAIL
 	msg['To'] = ", ".join(EMPFAENGER)
 	session.sendmail(EMAIL, EMPFAENGER, msg.as_string())
-	Detect_Powerfail()
 
 def Sendmail_Powerfail():
 	BODY =      """
@@ -183,7 +190,7 @@ def Sendmail_Powerfail():
 	msg['From'] = EMAIL
 	msg['To'] = ", ".join(EMPFAENGER)
 	session.sendmail(EMAIL, EMPFAENGER, msg.as_string())
-	Detect_Powerback()
+
 
 def Sendmail_Powerback():
 	BODY =      """
@@ -217,49 +224,62 @@ def Sendmail_Powerback():
 	msg['From'] = EMAIL
 	msg['To'] = ", ".join(EMPFAENGER)
 	session.sendmail(EMAIL, EMPFAENGER, msg.as_string())
-	Detect_Powerfail()
 
 
-
-
-
-def Detect_Powerback():
-    while 1:
-     x=serial_port.readline()
-     y=x.decode(encoding='UTF-8',errors='strict')
-     if y==('xxx--StromPiPowerBack--xxx\n'):
-      print ("PowerBack - Email Sent")
-      Sendmail_Powerback()
-
-
-
-def Power_Lost(a):
-
-	print ("Raspberry Pi Powerfail detected")
-	print ("Powerfail_Email sent")
-	Sendmail_Powerfail()
-
-
-
-def Detect_Powerfail():
-    while 1:
-     x=serial_port.readline()
-     y = x.decode(encoding='UTF-8',errors='strict')
-     if y==('xxxShutdownRaspberryPixxx\n') or y==('xxx--StromPiPowerfail--xxx\n'):
-      print ("PowerFail - Email Sent")
-      Sendmail_Powerfail()
-
-time.sleep(3)
 if Restart_Mail == 1:
-	Sendmail_Restart()
+ Sendmail_Restart()
+ print("Restart-Mail sent")	
 
-try:
-	Detect_Powerfail()
-	while True:	
-		time.sleep(0.1)
+print ("E-Mail notification in  case of Powerfailure (CTRL-C for exit)")
 
-except KeyboardInterrupt:
-	print ("\nKeyboard Interrupt")
-finally:
-	GPIO.cleanup()
-	print ("Cleaned up Pins")
+t=0
+counter=0
+EmailSent = False
+while 1:
+ cpu = CPUTemperature()		# Auslesen der aktuellen Temperaturwerte
+ actTemp = cpu.temperature	# Aktuelle Temperatur als float-Variable
+
+ diff = actTemp - startTemp
+ sum = sum + diff
+ pDiff = diff * pTemp
+ iDiff = sum * iTemp
+ fanSpeed = pDiff + iDiff + 35
+
+
+ if fanSpeed > 100:
+  fanSpeed = 100
+ elif fanSpeed < 35:
+  fanSpeed = 0
+	
+ if sum > 100:
+  sum = 100
+ elif sum < -100:
+  sum = -100
+	
+ #print(str(actTemp) + "C, " + str(fanSpeed))
+	
+ led.value = fanSpeed / 100	# PWM Ausgabe
+ 
+ 
+ 
+ x=serial_port.readline()
+ y = x.decode(encoding='UTF-8',errors='strict')
+ if y != "":
+   print(y)
+ if y.find('xxx--StromPiPowerBack--xxx\n') != -1:
+  print ("PowerBack - Raspberry Pi Shutdown aborted")
+  Sendmail_Powerback()
+  EmailSent = False
+  t=0
+ elif y.find('xxxShutdownRaspberryPixxx\n') != -1:
+  print ("PowerFail - Raspberry Pi Shutdown")
+  if EmailSent == False:
+   Sendmail_Powerfail()
+   EmailSent = True
+  t= wait_for_shutdowntimer +1
+ if t>0:
+  t-=2
+  print(t)
+  if t <= 0:
+   print("Shutting Down")
+   os.system("sudo shutdown -h now")
