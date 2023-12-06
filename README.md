@@ -146,6 +146,9 @@ Firmware 1.72b
 Firmware 1.72c
 - Bugfix on Interval Feature - Thanks @ctc
 
+Firmware 1.8
+- Several Bugfixes and improvements for Alarm-Modes and 3-Stage-Mode
+
 ******************************************************************************************************************
 	
 Request Firmware Updates:
