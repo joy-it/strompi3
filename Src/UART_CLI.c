@@ -76,7 +76,7 @@ uint8_t rx_ready = 0;
 uint8_t console_start = 0;
 uint8_t command_order = 0;
 
-char firmwareVersion[9] = "v1.8";
+char firmwareVersion[9] = "v1.81";
 
 /* FreeRTOS+IO includes. */
 
@@ -86,6 +86,9 @@ char firmwareVersion[9] = "v1.8";
 
 /* Dimensions the buffer into which input characters are placed. */
 #define cmdMAX_INPUT_SIZE			50
+
+/* Dimensions the temp buffer */
+#define TEMP_MESSAGE_SIZE			50
 
 /* Place holder for calls to ioctl that don't use the value parameter. */
 #define cmdPARAMTER_NOT_USED		( ( void * ) 0 )
@@ -221,7 +224,7 @@ static void prvUARTCommandConsoleTask(void const * pvParameters)
 			 to be executed again. */
 			if (cInputIndex == 0)
 			{
-				strcpy((char *) cInputString, (char *) cLastInputString);
+				strncpy((char *) cInputString, (char *) cLastInputString, cmdMAX_INPUT_SIZE);
 			}
 
 			/* Pass the received command to the command interpreter.  The
@@ -256,7 +259,7 @@ static void prvUARTCommandConsoleTask(void const * pvParameters)
 			 Clear the input	string ready to receive the next command.  Remember
 			 the command that was just processed first in case it is to be
 			 processed again. */
-			strcpy((char *) cLastInputString, (char *) cInputString);
+			strncpy((char *) cLastInputString, (char *) cInputString, cmdMAX_INPUT_SIZE);
 			cInputIndex = 0;
 			memset(cInputString, 0x00, cmdMAX_INPUT_SIZE);
 
@@ -290,7 +293,7 @@ static void prvUARTCommandConsoleTask(void const * pvParameters)
 				 string will be passed to the command interpreter. */
 				if ((cRxedChar >= ' ') && (cRxedChar <= '~'))
 				{
-					if (cInputIndex < cmdMAX_INPUT_SIZE)
+					if (cInputIndex < cmdMAX_INPUT_SIZE-1)
 					{
 						cInputString[cInputIndex] = cRxedChar;
 						cInputIndex++;
@@ -977,10 +980,10 @@ static portBASE_TYPE prvStatusRPi(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 	uint32_t time;
 	uint32_t date;
 	uint8_t alarm_mode_tmp;
-	uint8_t alarm_time_tmp;
-	uint8_t alarm_date_tmp;
-	uint8_t alarm_weekday_tmp;
-	uint8_t alarm__tmp;
+	// uint8_t alarm_time_tmp;
+	// uint8_t alarm_date_tmp;
+	// uint8_t alarm_weekday_tmp;
+	// uint8_t alarm__tmp;
 
 	RTC_TimeTypeDef stimestructureget;
 	RTC_DateTypeDef sdatestructureget;
@@ -1126,7 +1129,7 @@ static portBASE_TYPE prvShowStatus(int8_t *pcWriteBuffer, size_t xWriteBufferLen
 
 	sprintf((char *) pcWriteBuffer, "\r\n Time: %02d:%02d:%02d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
 
-	char temp_message[20];
+	char temp_message[TEMP_MESSAGE_SIZE];
 
 	switch (sdatestructureget.WeekDay)
 	{
@@ -1333,7 +1336,7 @@ static portBASE_TYPE prvShowAlarm(int8_t *pcWriteBuffer, size_t xWriteBufferLen,
 
 	sprintf((char *) pcWriteBuffer, "\r\n Time: %02d:%02d:%02d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
 
-	char temp_message[21];
+	char temp_message[TEMP_MESSAGE_SIZE];
 
 	switch (sdatestructureget.WeekDay)
 	{
